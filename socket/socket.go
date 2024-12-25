@@ -44,6 +44,7 @@ func InitSocket() {
 	if err := http.ListenAndServe(":8000", nil); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
+	log.Printf("Server listened in port 8000")
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -65,6 +66,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	newClient := NewClient(conn)
 
 	ClientChannel <- newClient
+
+	log.Printf("Client %s connected", newClient.ID)
 
 	for {
 		messageType, data, err := conn.ReadMessage()

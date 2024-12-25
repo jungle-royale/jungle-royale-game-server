@@ -15,14 +15,18 @@ import (
 
 type Game struct {
 	state     *state.State
-	clients   []*socket.Client
+	clients   map[string]*socket.Client
 	clientsMu sync.Mutex
 }
 
 func NewGame() *Game {
-	GameContext := &Game{state.NewState(), []*socket.Client{}, sync.Mutex{}} // generate game
-	go (*GameContext).CalcLoop()                                             // start main loop
-	go (*GameContext).BroadcastLoop()                                        // broadcast to client
+	GameContext := &Game{
+		state.NewState(),
+		make(map[string]*socket.Client),
+		sync.Mutex{},
+	} // generate game
+	go (*GameContext).CalcLoop()      // start main loop
+	go (*GameContext).BroadcastLoop() // broadcast to client
 
 	// connection event handler
 	go func() {
@@ -44,7 +48,7 @@ func NewGame() *Game {
 func (game *Game) SetPlayer(client *socket.Client) {
 
 	game.clientsMu.Lock()
-	game.clients = append(game.clients, client)
+	game.clients[client.ID] = client
 	game.clientsMu.Unlock()
 
 	game.state.AddPlayer(client.ID)
@@ -52,8 +56,8 @@ func (game *Game) SetPlayer(client *socket.Client) {
 	// send GameInit message
 	gameInit := &message.GameInit{Id: client.ID}
 	data, err := proto.Marshal(&message.Wrapper{
-		MessageType: &message.Wrapper_Gameinit{
-			Gameinit: gameInit,
+		MessageType: &message.Wrapper_GameInit{
+			GameInit: gameInit,
 		},
 	})
 	if err != nil {
@@ -77,9 +81,9 @@ func (game *Game) HandleMessage(clientMessage *socket.ClientMessage) {
 		}
 
 		// change message
-		if change := wrapper.GetChange(); change != nil {
+		if change := wrapper.GetDirChange(); change != nil {
 			if player, exists := game.state.Players[clientMessage.ID]; exists {
-				go player.DirChange(change.Dx, change.Dy)
+				go player.DirChange(float64(change.GetAngle()), change.IsMoved)
 			}
 		}
 	}
@@ -102,7 +106,7 @@ func (game *Game) BroadcastLoop() {
 
 		playerList := make([]*message.Player, 0, len(game.state.Players))
 		for _, player := range game.state.Players {
-			playerList = append(playerList, player.MakeSendingPlayerData())
+			playerList = append(playerList, player.MakeSendingData())
 		}
 
 		gameState := &message.GameState{
@@ -123,6 +127,7 @@ func (game *Game) BroadcastLoop() {
 			if err := client.Conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
 				log.Printf("Failed to send message to client %s: %v", client.ID, err)
 				client.Conn.Close()
+				delete(game.clients, client.ID)
 			}
 		}
 	}
