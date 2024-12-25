@@ -16,7 +16,11 @@ func NewState() *State {
 }
 
 func (state *State) AddPlayer(id string) {
-	newPlayer := object.NewPlayer(id, float32(rand.Intn(1000)), float32(rand.Intn(1000)))
+	newPlayer := object.NewPlayer(
+		id,
+		float32(rand.Intn(1000)),
+		float32(rand.Intn(1000)),
+	)
 	state.playersMu.Lock()
 	state.Players[id] = newPlayer
 	state.playersMu.Unlock()
