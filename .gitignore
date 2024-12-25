@@ -1,0 +1,38 @@
+# Go 빌드 출력물
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go 모듈 캐시 및 바이너리 디렉토리
+/bin/
+/pkg/
+/vendor/
+
+# 의존성 파일
+go.sum
+*.lock
+
+# OS별 파일 및 디렉토리
+.DS_Store
+Thumbs.db
+
+# IDE 및 편집기 파일
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Log 파일
+*.log
+
+# 환경 설정 파일
+.env
+*.env
+*.config
