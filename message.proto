@@ -17,8 +17,8 @@ message GameInit {
 }
 
 message Change {
-    float x = 1;
-    float y = 2;
+    float dx = 1;
+    float dy = 2;
 }
 
 message GameState {
@@ -27,6 +27,6 @@ message GameState {
 
 message Player {
     string id = 1;
-    int32 x = 2;
-    int32 y = 3;
+    float x = 2;
+    float y = 3;
 }

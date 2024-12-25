@@ -8,21 +8,22 @@ import (
 
 type State struct {
 	playersMu sync.Mutex
-	players   []object.Player
+	Players   map[string]*object.Player
 }
 
 func NewState() *State {
-	return &State{sync.Mutex{}, []object.Player{}}
+	return &State{sync.Mutex{}, make(map[string]*object.Player)}
 }
 
 func (state *State) AddPlayer(id string) {
-	state.players = append(state.players, *object.NewPlayer(id, float32(rand.Intn(1000)), float32(rand.Intn(1000))))
+	newPlayer := object.NewPlayer(id, float32(rand.Intn(1000)), float32(rand.Intn(1000)))
+	state.playersMu.Lock()
+	state.Players[id] = newPlayer
+	state.playersMu.Unlock()
 }
 
-func (state *State) CalcLoop() {
-	state.playersMu.Lock()
-	for idx := range state.players {
-		state.players[idx].Move()
+func (state *State) CalcState() {
+	for idx := range state.Players {
+		state.Players[idx].Move()
 	}
-	state.playersMu.Unlock()
 }

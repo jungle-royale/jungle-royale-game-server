@@ -36,3 +36,8 @@ Thumbs.db
 .env
 *.env
 *.config
+
+# client 테스트용용
+phaser-client/
+compile_protobuf.sh
+temp.txt
