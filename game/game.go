@@ -2,50 +2,100 @@ package game
 
 import (
 	"jungle-royale/message"
-	"jungle-royale/socket"
 	"jungle-royale/state"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/proto"
+)
+
+const (
+	MaxClientCount        = 100
+	CalcLoopInterval      = 16
+	BroadCastLoopInterval = 16
 )
 
 type Game struct {
-	state     *state.State
-	clients   map[string]*socket.Client
-	clientsMu sync.Mutex
+	state                *state.State
+	clients              map[string]*GameClient
+	clientChannel        chan *GameClient
+	clientMessageChannel chan *GameClientMessage
+	clientsMu            sync.Mutex
 }
 
 func NewGame() *Game {
-	GameContext := &Game{
+	return &Game{
 		state.NewState(),
-		make(map[string]*socket.Client),
+		make(map[string]*GameClient),
+		make(chan *GameClient, MaxClientCount),
+		make(chan *GameClientMessage, MaxClientCount),
 		sync.Mutex{},
-	} // generate game
-	go (*GameContext).CalcLoop()      // start main loop
-	go (*GameContext).BroadcastLoop() // broadcast to client
+	}
+}
+
+func (game *Game) StartGame() {
+	go game.CalcLoop()      // start main loop
+	go game.BroadcastLoop() // broadcast to client
 
 	// connection event handler
 	go func() {
-		for client := range socket.ClientChannel {
-			go GameContext.SetPlayer(client)
+		for client := range game.clientChannel {
+			go game.SetPlayer(client)
 		}
 	}()
 
 	// message event handler
 	go func() {
-		for message := range socket.MessageChannel {
-			go GameContext.HandleMessage(message)
+		for message := range game.clientMessageChannel {
+			go game.HandleMessage(message)
 		}
 	}()
 
-	return GameContext
+	game.InitSocket(func(w http.ResponseWriter, r *http.Request) {
+		var upgrader = websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		}
+
+		// http → websocket upgrade
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Printf("Failed to upgrade to WebSocket: %v", err)
+			return
+		}
+		defer conn.Close()
+
+		newClient := NewGameClient(conn)
+
+		game.clientChannel <- newClient
+
+		log.Printf("Client %s connected", newClient.ID)
+
+		for {
+			messageType, data, err := conn.ReadMessage()
+			if err != nil {
+				log.Printf("Client %s disconnected: %v", newClient.ID, err)
+				break
+			}
+
+			game.clientMessageChannel <- NewGameClientMessage(messageType, newClient.ID, data)
+		}
+	})
 }
 
-func (game *Game) SetPlayer(client *socket.Client) {
+func (game *Game) InitSocket(handleWebSocket func(w http.ResponseWriter, r *http.Request)) {
+	http.HandleFunc("/ws", handleWebSocket)
+	if err := http.ListenAndServe(":8000", nil); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
+	log.Printf("Server listened in port 8000")
+}
+
+func (game *Game) SetPlayer(client *GameClient) {
 
 	game.clientsMu.Lock()
 	game.clients[client.ID] = client
@@ -69,7 +119,7 @@ func (game *Game) SetPlayer(client *socket.Client) {
 	}
 }
 
-func (game *Game) HandleMessage(clientMessage *socket.ClientMessage) {
+func (game *Game) HandleMessage(clientMessage *GameClientMessage) {
 
 	if clientMessage.MessageType == websocket.BinaryMessage {
 
@@ -90,7 +140,7 @@ func (game *Game) HandleMessage(clientMessage *socket.ClientMessage) {
 }
 
 func (game *Game) CalcLoop() {
-	ticker := time.NewTicker(16 * time.Millisecond)
+	ticker := time.NewTicker(CalcLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C { // calculation loop
@@ -99,7 +149,7 @@ func (game *Game) CalcLoop() {
 }
 
 func (game *Game) BroadcastLoop() {
-	ticker := time.NewTicker(16 * time.Millisecond)
+	ticker := time.NewTicker(BroadCastLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C { // broadcast loop
