@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package message;
+
+option go_package = "/message";
+
+message Wrapper {
+    oneof MessageType {
+        Change change = 1;
+        GameState state = 2;
+        GameInit gameinit = 3;
+    }
+}
+
+message GameInit {
+    string id = 1;   
+}
+
+message Change {
+    float x = 1;
+    float y = 2;
+}
+
+message GameState {
+    repeated Player players = 1;
+}
+
+message Player {
+    string id = 1;
+    int32 x = 2;
+    int32 y = 3;
+}
