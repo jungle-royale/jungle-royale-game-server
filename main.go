@@ -1,9 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"jungle-royale/game"
+	"jungle-royale/socket"
 )
 
 func main() {
-	fmt.Println("Hello")
+	var myGame = game.NewGame()
+	_ = myGame
+
+	socket.InitSocket()
 }
