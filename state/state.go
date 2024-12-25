@@ -44,6 +44,7 @@ func (state *State) AddBullet(BulletCreateMessage *message.BulletCreate) {
 		BulletCreateMessage.StartX,
 		BulletCreateMessage.StartY,
 		float64(BulletCreateMessage.Angle),
+		state.Players,
 	)
 	state.bulletsMu.Lock()
 	state.Bullets[bulletId] = newBullet
