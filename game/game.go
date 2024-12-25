@@ -80,11 +80,16 @@ func (game *Game) HandleMessage(clientMessage *socket.ClientMessage) {
 			return
 		}
 
-		// change message
-		if change := wrapper.GetDirChange(); change != nil {
+		// dirChange message
+		if dirChange := wrapper.GetDirChange(); dirChange != nil {
 			if player, exists := game.state.Players[clientMessage.ID]; exists {
-				go player.DirChange(float64(change.GetAngle()), change.IsMoved)
+				go player.DirChange(float64(dirChange.GetAngle()), dirChange.IsMoved)
 			}
+		}
+
+		// bulletCreate message
+		if bulletCreate := wrapper.GetBulletCreate(); bulletCreate != nil {
+			game.state.AddBullet(bulletCreate)
 		}
 	}
 }
@@ -109,8 +114,14 @@ func (game *Game) BroadcastLoop() {
 			playerList = append(playerList, player.MakeSendingData())
 		}
 
+		bulletList := make([]*message.BulletState, 0, len(game.state.Bullets))
+		for _, bullet := range game.state.Bullets {
+			bulletList = append(bulletList, bullet.MakeSendingData())
+		}
+
 		gameState := &message.GameState{
-			Players: playerList,
+			Players:     playerList,
+			BulletState: bulletList,
 		}
 
 		data, err := proto.Marshal(&message.Wrapper{
