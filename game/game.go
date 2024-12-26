@@ -2,6 +2,7 @@ package game
 
 import (
 	"jungle-royale/message"
+	"jungle-royale/object"
 	"jungle-royale/state"
 	"log"
 	"net/http"
@@ -96,7 +97,6 @@ func (game *Game) InitSocket(handleWebSocket func(w http.ResponseWriter, r *http
 }
 
 func (game *Game) SetPlayer(client *GameClient) {
-
 	game.clientsMu.Lock()
 	game.clients[client.ID] = client
 	game.clientsMu.Unlock()
@@ -120,9 +120,7 @@ func (game *Game) SetPlayer(client *GameClient) {
 }
 
 func (game *Game) HandleMessage(clientMessage *GameClientMessage) {
-
 	if clientMessage.MessageType == websocket.BinaryMessage {
-
 		// Protobuf message decode
 		var wrapper message.Wrapper
 		if err := proto.Unmarshal(clientMessage.Data, &wrapper); err != nil {
@@ -132,7 +130,8 @@ func (game *Game) HandleMessage(clientMessage *GameClientMessage) {
 
 		// dirChange message
 		if dirChange := wrapper.GetDirChange(); dirChange != nil {
-			if player, exists := game.state.Players[clientMessage.ID]; exists {
+			if value, exists := game.state.Players.Load(clientMessage.ID); exists {
+				player := value.(*object.Player)
 				go player.DirChange(float64(dirChange.GetAngle()), dirChange.IsMoved)
 			}
 		}
@@ -158,16 +157,19 @@ func (game *Game) BroadcastLoop() {
 	defer ticker.Stop()
 
 	for range ticker.C { // broadcast loop
-
-		playerList := make([]*message.Player, 0, len(game.state.Players))
-		for _, player := range game.state.Players {
+		playerList := make([]*message.Player, 0)
+		game.state.Players.Range(func(key, value any) bool {
+			player := value.(*object.Player)
 			playerList = append(playerList, player.MakeSendingData())
-		}
+			return true
+		})
 
-		bulletList := make([]*message.BulletState, 0, len(game.state.Bullets))
-		for _, bullet := range game.state.Bullets {
+		bulletList := make([]*message.BulletState, 0)
+		game.state.Bullets.Range(func(key, value any) bool {
+			bullet := value.(*object.Bullet)
 			bulletList = append(bulletList, bullet.MakeSendingData())
-		}
+			return true
+		})
 
 		gameState := &message.GameState{
 			Players:     playerList,
@@ -180,16 +182,18 @@ func (game *Game) BroadcastLoop() {
 			},
 		})
 		if err != nil {
-			log.Printf("Falied to marshal GameState: %v", err)
+			log.Printf("Failed to marshal GameState: %v", err)
 			return
 		}
 
-		for _, client := range game.clients {
+		game.clientsMu.Lock()
+		for id, client := range game.clients {
 			if err := client.Conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
 				log.Printf("Failed to send message to client %s: %v", client.ID, err)
 				client.Conn.Close()
-				delete(game.clients, client.ID)
+				delete(game.clients, id)
 			}
 		}
+		game.clientsMu.Unlock()
 	}
 }

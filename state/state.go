@@ -10,18 +10,14 @@ import (
 )
 
 type State struct {
-	playersMu sync.Mutex
-	Players   map[string]*object.Player
-	bulletsMu sync.Mutex
-	Bullets   map[string]*object.Bullet
+	Players sync.Map
+	Bullets sync.Map
 }
 
 func NewState() *State {
 	return &State{
-		sync.Mutex{},
-		make(map[string]*object.Player),
-		sync.Mutex{},
-		make(map[string]*object.Bullet),
+		Players: sync.Map{},
+		Bullets: sync.Map{},
 	}
 }
 
@@ -31,9 +27,7 @@ func (state *State) AddPlayer(id string) {
 		float32(rand.Intn(1000)),
 		float32(rand.Intn(1000)),
 	)
-	state.playersMu.Lock()
-	state.Players[id] = newPlayer
-	state.playersMu.Unlock()
+	state.Players.Store(id, newPlayer)
 }
 
 func (state *State) AddBullet(BulletCreateMessage *message.BulletCreate) {
@@ -44,21 +38,40 @@ func (state *State) AddBullet(BulletCreateMessage *message.BulletCreate) {
 		BulletCreateMessage.StartX,
 		BulletCreateMessage.StartY,
 		float64(BulletCreateMessage.Angle),
-		state.Players,
+		state.GetPlayers(),
 	)
-	state.bulletsMu.Lock()
-	state.Bullets[bulletId] = newBullet
-	state.bulletsMu.Unlock()
+	state.Bullets.Store(bulletId, newBullet)
+}
+
+func (state *State) GetPlayers() map[string]*object.Player {
+	players := make(map[string]*object.Player)
+	state.Players.Range(func(key, value any) bool {
+		players[key.(string)] = value.(*object.Player)
+		return true
+	})
+	return players
 }
 
 func (state *State) CalcState() {
-	for id := range state.Players {
-		state.Players[id].Move()
-	}
-	for id := range state.Bullets {
-		isValie := state.Bullets[id].Move()
-		if !isValie {
-			delete(state.Bullets, id)
+
+	state.Players.Range(func(key, value any) bool {
+		playerId := key.(string)
+		player := value.(*object.Player)
+		if !player.IsValid() {
+			state.Players.Delete(playerId)
+			return true
 		}
-	}
+		player.Move()
+		return true
+	})
+
+	state.Bullets.Range(func(key, value any) bool {
+		bulletId := key.(string)
+		bullet := value.(*object.Bullet)
+		isValid := bullet.Move()
+		if !isValid {
+			state.Bullets.Delete(bulletId)
+		}
+		return true
+	})
 }
