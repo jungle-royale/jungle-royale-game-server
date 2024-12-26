@@ -292,23 +292,41 @@ export class Game extends Scene {
     handleState(state) {
         // console.log(state);
         if (state.playersList) {
-            state.playersList.forEach((player, index) => {
+
+            for (const player in this.players) {
+                this.players[player].circle.clear();
+            }
+
+            // 새 playersList를 순회하면서 업데이트
+            const playerIdsInState = new Set(); // state.playersList에서 확인된 player id를 저장할 Set
+            state.playersList.forEach((player) => {
+                playerIdsInState.add(player.id); // state에 있는 player id 저장
                 if (!(player.id in this.players)) {
                     this.players[player.id] = new Player(player.id, player.x, player.y, this);
                 }
                 if (this.players[player.id]) {
                     this.players[player.id].updatePosition(player.x, player.y);
                 }
-                if (player.id == this.ID)
+                if (player.id == this.ID) {
                     this.cameras.main.centerOn(player.x, player.y);
+                }
             });
+    
+            // this.players에 있지만 state.playersList에 없는 player 삭제
+            for (const playerId in this.players) {
+                if (!playerIdsInState.has(playerId)) {
+                    delete this.players[playerId]; // this.players에서 제거
+                }
+            }
         }
+    
         if (state.bulletstateList) {
+
             // 기존 bullets 처리
             for (const bullet in this.bullets) {
                 this.bullets[bullet].circle.clear();
             }
-
+    
             // 새 bulletstateList를 순회하면서 업데이트
             const bulletIdsInState = new Set(); // state.bulletstateList에서 확인된 bulletid를 저장할 Set
             state.bulletstateList.forEach((bullet) => {
@@ -320,7 +338,7 @@ export class Game extends Scene {
                     this.bullets[bullet.bulletid].updatePosition(bullet.x, bullet.y);
                 }
             });
-
+    
             // this.bullets에 있지만 state.bulletstateList에 없는 bullet 삭제
             for (const bulletId in this.bullets) {
                 if (!bulletIdsInState.has(bulletId)) {
@@ -329,6 +347,6 @@ export class Game extends Scene {
                 }
             }
         }
-
     }
+    
 }

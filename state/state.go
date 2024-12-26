@@ -10,8 +10,8 @@ import (
 )
 
 type State struct {
-	Players sync.Map // 동시성을 지원하는 sync.Map
-	Bullets sync.Map // 동시성을 지원하는 sync.Map
+	Players sync.Map
+	Bullets sync.Map
 }
 
 func NewState() *State {
@@ -27,7 +27,7 @@ func (state *State) AddPlayer(id string) {
 		float32(rand.Intn(1000)),
 		float32(rand.Intn(1000)),
 	)
-	state.Players.Store(id, newPlayer) // sync.Map에 데이터 저장
+	state.Players.Store(id, newPlayer)
 }
 
 func (state *State) AddBullet(BulletCreateMessage *message.BulletCreate) {
@@ -38,12 +38,11 @@ func (state *State) AddBullet(BulletCreateMessage *message.BulletCreate) {
 		BulletCreateMessage.StartX,
 		BulletCreateMessage.StartY,
 		float64(BulletCreateMessage.Angle),
-		state.GetPlayers(), // 플레이어 목록을 일반 맵으로 변환
+		state.GetPlayers(),
 	)
-	state.Bullets.Store(bulletId, newBullet) // sync.Map에 데이터 저장
+	state.Bullets.Store(bulletId, newBullet)
 }
 
-// GetPlayers는 sync.Map의 데이터를 일반 map[string]*object.Player로 변환
 func (state *State) GetPlayers() map[string]*object.Player {
 	players := make(map[string]*object.Player)
 	state.Players.Range(func(key, value any) bool {
@@ -54,20 +53,24 @@ func (state *State) GetPlayers() map[string]*object.Player {
 }
 
 func (state *State) CalcState() {
-	// 플레이어 상태 계산
+
 	state.Players.Range(func(key, value any) bool {
+		playerId := key.(string)
 		player := value.(*object.Player)
+		if !player.IsValid() {
+			state.Players.Delete(playerId)
+			return true
+		}
 		player.Move()
 		return true
 	})
 
-	// 총알 상태 계산
 	state.Bullets.Range(func(key, value any) bool {
 		bulletId := key.(string)
 		bullet := value.(*object.Bullet)
 		isValid := bullet.Move()
 		if !isValid {
-			state.Bullets.Delete(bulletId) // 유효하지 않은 총알 삭제
+			state.Bullets.Delete(bulletId)
 		}
 		return true
 	})
