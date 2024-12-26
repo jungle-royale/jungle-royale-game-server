@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package message;
+
+message Wrapper {
+    oneof MessageType {
+        DirChange dirChange = 1;
+        BulletCreate bulletCreate = 2;
+        GameState state = 3;
+        GameInit gameInit = 4;
+    }
+}
+
+// server → client : init message
+message GameInit {
+    string id = 1;  // player id
+}
+
+// client → server : changing state
+message DirChange {
+    float angle = 1;
+    bool isMoved = 2;
+}
+
+// server → client
+message GameState {
+    repeated Player players = 1;
+    repeated BulletState bulletState = 2;
+}
+
+message Player {
+    string id = 1;
+    float x = 2;
+    float y = 3;
+}
+
+message BulletCreate {
+    string playerId = 1;
+    float startX = 2;
+    float startY = 3;
+    float angle = 4;
+}
+
+message BulletState {
+    string bulletId = 1;
+    float x = 2;
+    float y = 3;
+}
