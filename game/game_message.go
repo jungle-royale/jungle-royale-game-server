@@ -20,17 +20,21 @@ func (game *Game) HandleMessage(clientId string, data []byte) {
 	}
 
 	// dirChange message
-	if dirChange := wrapper.GetDirChange(); dirChange != nil {
+	if dirChange := wrapper.GetChangeDir(); dirChange != nil {
 		game.handleDirChange(clientId, dirChange)
 	}
 
+	if doDash := wrapper.GetDoDash(); doDash != nil {
+		game.handleDoDash(clientId, doDash)
+	}
+
 	// bulletCreate message
-	if CreateBullet := wrapper.GetCreateBullet(); CreateBullet != nil {
-		game.handleBulletCreate(clientId, CreateBullet)
+	if createBullet := wrapper.GetCreateBullet(); createBullet != nil {
+		game.handleBulletCreate(clientId, createBullet)
 	}
 }
 
-func (game *Game) handleDirChange(clientId string, msg *message.DirChange) {
+func (game *Game) handleDirChange(clientId string, msg *message.ChangeDir) {
 	if value, exists := game.state.Players.Load(clientId); exists {
 		player := value.(*object.Player)
 		go player.DirChange(float64(msg.GetAngle()), msg.IsMoved)
@@ -39,4 +43,11 @@ func (game *Game) handleDirChange(clientId string, msg *message.DirChange) {
 
 func (game *Game) handleBulletCreate(clientId string, msg *message.CreateBullet) {
 	game.state.AddBullet(msg)
+}
+
+func (game *Game) handleDoDash(clientId string, msg *message.DoDash) {
+	if value, exists := game.state.Players.Load(clientId); exists {
+		player := value.(*object.Player)
+		go player.DoDash()
+	}
 }

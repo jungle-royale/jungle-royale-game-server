@@ -4,11 +4,12 @@ package message;
 
 message Wrapper {
     oneof MessageType {
-        DirChange dirChange = 1;
-        CreateBullet createBullet = 2;
-        GameState gameState = 3;
-        GameCount gameCount = 4;
-        GameInit gameInit = 5;
+        ChangeDir changeDir = 1;
+        DoDash doDash = 2;
+        CreateBullet createBullet = 3;
+        GameState gameState = 4;
+        GameCount gameCount = 5;
+        GameInit gameInit = 6;
     }
 }
 
@@ -18,7 +19,7 @@ message GameInit {
 }
 
 // client → server : changing state
-message DirChange {
+message ChangeDir {
     float angle = 1;
     bool isMoved = 2;
 }
@@ -50,4 +51,8 @@ message BulletState {
 
 message GameCount {
     int32 count = 1;
+}
+
+message DoDash {
+    bool dash = 1;
 }
