@@ -8,8 +8,7 @@ BASE_DIR=$(dirname "$0")
 # server 폴더에서 Go 코드 생성
 echo "Generating Go code in server folder..."
 cd "$BASE_DIR" || exit
-# pwd
-protoc --go_out=. message.proto
+protoc --go_out=. message/message.proto
 if [ $? -ne 0 ]; then
     echo "Failed to generate Go code."
     exit 1
@@ -18,7 +17,6 @@ fi
 # phaser-client 폴더에서 JavaScript 코드 생성
 echo "Generating JavaScript code in phaser-client folder..."
 cd "$BASE_DIR/phaser-client" || exit
-pwd
 protoc --js_out=import_style=commonjs,binary:. message.proto
 if [ $? -ne 0 ]; then
     echo "Failed to generate JavaScript code."

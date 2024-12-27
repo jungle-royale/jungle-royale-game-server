@@ -7,9 +7,10 @@ option go_package = "/message";
 message Wrapper {
     oneof MessageType {
         DirChange dirChange = 1;
-        BulletCreate bulletCreate = 2;
-        GameState state = 3;
-        GameInit gameInit = 4;
+        CreateBullet createBullet = 2;
+        GameState gameState = 3;
+        GameCount gameCount = 4;
+        GameInit gameInit = 5;
     }
 }
 
@@ -26,17 +27,17 @@ message DirChange {
 
 // server → client
 message GameState {
-    repeated Player players = 1;
+    repeated PlayerState playerState = 1;
     repeated BulletState bulletState = 2;
 }
 
-message Player {
+message PlayerState {
     string id = 1;
     float x = 2;
     float y = 3;
 }
 
-message BulletCreate {
+message CreateBullet {
     string playerId = 1;
     float startX = 2;
     float startY = 3;
@@ -47,4 +48,8 @@ message BulletState {
     string bulletId = 1;
     float x = 2;
     float y = 3;
+}
+
+message GameCount {
+    int32 count = 1;
 }

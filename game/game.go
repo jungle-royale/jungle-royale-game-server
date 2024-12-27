@@ -1,11 +1,13 @@
 package game
 
 import (
+	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/network"
 	"jungle-royale/object"
 	"jungle-royale/state"
 	"log"
+	"math/rand"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -17,31 +19,70 @@ const (
 	BroadCastLoopInterval = 16
 )
 
+const (
+	waiting = iota
+	counting
+	playing
+)
+
 type Game struct {
-	state  *state.State
-	socket *network.Socket
+	gameState    int
+	minPlayerNum int
+	playerNum    int
+	state        *state.State
+	socket       *network.Socket
 }
 
-func NewGame(socket *network.Socket) *Game {
+func NewGame(socket *network.Socket, minPlayerNum int) *Game {
 	game := &Game{
-		state.NewState(),
-		socket,
+		minPlayerNum: minPlayerNum,
+		playerNum:    0,
+		state:        state.NewState(),
+		socket:       socket,
 	}
-	go game.CalcLoop()      // start main loop
-	go game.BroadcastLoop() // broadcast to client
+
+	return game
+}
+
+func (game *Game) SetReadyStatus() *Game {
+	game.gameState = waiting
+	game.state.SetState(cons.WAITING_MAP_CHUNK_NUM)
+	return game
+}
+
+func (game *Game) SetPlayingStatus() *Game {
+	game.gameState = playing
+	game.state.SetState(game.playerNum * game.playerNum)
+	game.state.Players.Range(func(key, value any) bool {
+		player := value.(*object.Player)
+		x := float32(rand.Intn(int(game.state.MaxCoord)))
+		y := float32(rand.Intn(int(game.state.MaxCoord)))
+		player.SetLocation(x, y)
+		return true
+	})
+	return game
+}
+
+func (game *Game) StartGame() *Game {
+	go game.CalcGameTickLoop() // start main loop
+	go game.BroadcastLoop()    // broadcast to client
+	go game.CalcSecLoop()
 	return game
 }
 
 func (game *Game) OnClient(clientId string) {
-	game.SetPlayer(clientId)
-}
-
-func (game *Game) OnMessage(data []byte, id string) {
-	game.HandleMessage(id, data)
+	if game.gameState == waiting {
+		game.playerNum++
+		game.SetPlayer(clientId)
+	}
 }
 
 func (game *Game) SetPlayer(clientId string) {
-	game.state.AddPlayer(clientId)
+
+	x := rand.Intn(int(game.state.MaxCoord))
+	y := rand.Intn(int(game.state.MaxCoord))
+
+	game.state.AddPlayer(clientId, float32(x), float32(y))
 
 	// send GameInit message
 	gameInit := &message.GameInit{Id: clientId}
@@ -63,33 +104,44 @@ func (game *Game) SetPlayer(clientId string) {
 	log.Printf("보낸겨: %s", gameInit.String())
 }
 
-func (game *Game) HandleMessage(clientId string, data []byte) {
-	var wrapper message.Wrapper
-	if err := proto.Unmarshal(data, &wrapper); err != nil {
-		log.Printf("Failed to unmarshal message from client %s: %v", clientId, err)
-		return
-	}
-
-	// dirChange message
-	if dirChange := wrapper.GetDirChange(); dirChange != nil {
-		if value, exists := game.state.Players.Load(clientId); exists {
-			player := value.(*object.Player)
-			go player.DirChange(float64(dirChange.GetAngle()), dirChange.IsMoved)
-		}
-	}
-
-	// bulletCreate message
-	if bulletCreate := wrapper.GetBulletCreate(); bulletCreate != nil {
-		game.state.AddBullet(bulletCreate)
-	}
-}
-
-func (game *Game) CalcLoop() {
+func (game *Game) CalcGameTickLoop() {
 	ticker := time.NewTicker(CalcLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C { // calculation loop
-		game.state.CalcState()
+		game.state.CalcGameTickState()
+	}
+}
+
+func (game *Game) CalcSecLoop() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	gameStartCount := 10
+	for range ticker.C {
+		if game.gameState != playing &&
+			game.playerNum >= game.minPlayerNum &&
+			gameStartCount >= 0 {
+			Count := &message.GameCount{
+				Count: int32(gameStartCount),
+			}
+			data, err := proto.Marshal(&message.Wrapper{
+				MessageType: &message.Wrapper_GameCount{
+					GameCount: Count,
+				},
+			})
+			if err != nil {
+				log.Printf("Failed to marshal GameState: %v", err)
+				return
+			}
+			log.Printf("game play in %d", gameStartCount)
+			(*game.socket).Broadcast(data)
+			gameStartCount--
+			if gameStartCount == -1 {
+				game.SetPlayingStatus()
+			}
+		}
+		game.state.SecLoop()
 	}
 }
 
@@ -98,7 +150,7 @@ func (game *Game) BroadcastLoop() {
 	defer ticker.Stop()
 
 	for range ticker.C { // broadcast loop
-		playerList := make([]*message.Player, 0)
+		playerList := make([]*message.PlayerState, 0)
 		game.state.Players.Range(func(key, value any) bool {
 			player := value.(*object.Player)
 			playerList = append(playerList, player.MakeSendingData())
@@ -113,13 +165,13 @@ func (game *Game) BroadcastLoop() {
 		})
 
 		gameState := &message.GameState{
-			Players:     playerList,
+			PlayerState: playerList,
 			BulletState: bulletList,
 		}
 
 		data, err := proto.Marshal(&message.Wrapper{
-			MessageType: &message.Wrapper_State{
-				State: gameState,
+			MessageType: &message.Wrapper_GameState{
+				GameState: gameState,
 			},
 		})
 		if err != nil {

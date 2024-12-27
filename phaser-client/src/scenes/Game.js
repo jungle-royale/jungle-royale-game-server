@@ -16,7 +16,7 @@ class Player {
     createCircle() {
         this.circle = this.scene.add.graphics();
         this.circle.fillStyle(this.scene.myPlayerId === this.id ? 0xff0000 : 0x00ff00, 1); // 내 플레이어는 빨간색, 나머지는 녹색
-        this.circle.fillCircle(this.x, this.y, 30); // x, y 좌표와 반지름 10
+        this.circle.fillCircle(this.x, this.y, 0.5); // x, y 좌표와 반지름 10
     }
 
     // 원 이동
@@ -26,7 +26,7 @@ class Player {
         if (this.circle) {
             this.circle.clear(); // 이전 원 제거
             this.circle.fillStyle(this.scene.myPlayerId === this.id ? 0xff0000 : 0x00ff00, 1);
-            this.circle.fillCircle(this.x, this.y, 30);
+            this.circle.fillCircle(this.x, this.y, 0.5);
         }
     }
 
@@ -53,7 +53,7 @@ class Bullet {
     createCircle() {
         this.circle = this.scene.add.graphics();
         this.circle.fillStyle(0x000000, 1);
-        this.circle.fillCircle(this.x, this.y, 5); // x, y 좌표와 반지름 10
+        this.circle.fillCircle(this.x, this.y, 0.2); // x, y 좌표와 반지름 10
     }
 
     // 원 이동
@@ -63,7 +63,7 @@ class Bullet {
         if (this.circle) {
             this.circle.clear(); // 이전 원 제거
             this.circle.fillStyle(0x000000, 1);
-            this.circle.fillCircle(this.x, this.y, 5);
+            this.circle.fillCircle(this.x, this.y, 0.2);
         }
     }
 
@@ -103,14 +103,12 @@ function sendChangeMessage(socket, angle, isMoved) {
 
 function sendBulletCreateMessage(socket, playerId, x, y, angle) {
 
-    console.log(x, y, angle);
-
     if (socket.readyState !== WebSocket.OPEN) {
         console.error('WebSocket is not open.');
         return;
     }
 
-    const bulletCreate = new message.BulletCreate();
+    const bulletCreate = new message.CreateBullet();
     bulletCreate.setPlayerid(playerId);
     bulletCreate.setStartx(x);
     bulletCreate.setStarty(y);
@@ -118,7 +116,7 @@ function sendBulletCreateMessage(socket, playerId, x, y, angle) {
 
     // Wrapper 메시지 생성
     const wrapper = new message.Wrapper();
-    wrapper.setBulletcreate(bulletCreate);
+    wrapper.setCreatebullet(bulletCreate);
 
     // 직렬화하여 바이너리 데이터로 변환
     const binaryData = wrapper.serializeBinary();
@@ -141,9 +139,9 @@ export class Game extends Scene {
 
     create() {
 
-        this.createGrid(1000, 1000, 50, 0x000000);
+        this.createGrid(1000, 1000, 20, 0x000000);
 
-        let testRoomId = "123123"
+        let testRoomId = "test"
 
         // WebSocket 연결
         this.socket = new WebSocket(`ws://localhost:8000/room?roomId=${testRoomId}`)
@@ -183,9 +181,12 @@ export class Game extends Scene {
                 if (wrapper.hasGameinit()) {
                     const gameInit = wrapper.getGameinit();
                     this.handleGameInit(gameInit.toObject());
-                } else if (wrapper.hasState()) {
-                    const gameState = wrapper.getState();
-                    this.handleState(gameState.toObject());
+                } else if (wrapper.hasGamestate()) {
+                    const gameState = wrapper.getGamestate();
+                    this.handleGameState(gameState.toObject());
+                } else if (wrapper.hasGamecount()) {
+                    const gameCount = wrapper.getGamecount();
+                    console.log(gameCount)
                 } else {
                     console.error("Unknown message type received.");
                 }
@@ -223,6 +224,8 @@ export class Game extends Scene {
                 degrees,
             );
         });
+
+        this.cameras.main.setZoom(15)
     }
 
     update() {
@@ -293,17 +296,17 @@ export class Game extends Scene {
         }
     }
 
-    handleState(state) {
+    handleGameState(state) {
         // console.log(state);
-        if (state.playersList) {
+        if (state.playerstateList) {
 
-            for (const player in this.players) {
+            for (const player in this.playerstateList) {
                 this.players[player].circle.clear();
             }
 
             // 새 playersList를 순회하면서 업데이트
             const playerIdsInState = new Set(); // state.playersList에서 확인된 player id를 저장할 Set
-            state.playersList.forEach((player) => {
+            state.playerstateList.forEach((player) => {
                 playerIdsInState.add(player.id); // state에 있는 player id 저장
                 if (!(player.id in this.players)) {
                     this.players[player.id] = new Player(player.id, player.x, player.y, this);
