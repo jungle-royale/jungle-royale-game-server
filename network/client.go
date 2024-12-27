@@ -1,8 +1,6 @@
 package network
 
 import (
-	"log"
-
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -20,11 +18,7 @@ func NewClient(conn *websocket.Conn) *Client {
 }
 
 func (client *Client) write(data []byte) error {
-	if err := client.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
-		log.Printf("Failed to send GameInit message to client %s: %v", client.ID, err)
-		return err
-	}
-	return nil
+	return client.conn.WriteMessage(websocket.BinaryMessage, data)
 }
 
 func (client *Client) close() {

@@ -31,6 +31,10 @@ func NewSocket() *Socket {
 		nil,
 		nil,
 	}
+	return &socket
+}
+
+func (socket *Socket) Listen() {
 
 	go func() {
 		for client := range socket.clientChannel {
@@ -38,17 +42,11 @@ func NewSocket() *Socket {
 		}
 	}()
 
-	// message event handler
 	go func() {
 		for message := range socket.clientMessageChannel {
 			go socket.handleClientMessage(message)
 		}
 	}()
-
-	return &socket
-}
-
-func (socket *Socket) Listen() {
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		var upgrader = websocket.Upgrader{
@@ -89,18 +87,25 @@ func (socket *Socket) Listen() {
 }
 
 func (socket *Socket) setClient(client *Client) {
+
 	socket.clientsMu.Lock()
 	socket.clients[client.ID] = client
 	socket.clientsMu.Unlock()
 
 	if socket.onClientCaller != nil {
 		socket.onClientCaller(ClientId(client.ID))
+	} else {
+		log.Fatal("no allocated onClientCaller")
 	}
 }
 
 func (socket *Socket) handleClientMessage(clientMessage *ClientMessage) {
-	if clientMessage.MessageType == websocket.BinaryMessage && socket.onMessageCaller != nil {
-		socket.onMessageCaller(clientMessage.ID, clientMessage.Data)
+	if clientMessage.MessageType == websocket.BinaryMessage {
+		if socket.onMessageCaller != nil {
+			socket.onMessageCaller(clientMessage.ID, clientMessage.Data)
+		} else {
+			log.Fatal("no allocated onMessageCaller")
+		}
 	}
 }
 
@@ -112,8 +117,8 @@ func (socket *Socket) OnMessage(handler func(ClientId, []byte)) {
 	socket.onMessageCaller = handler
 }
 
-func (socket *Socket) Send(data []byte, id ClientId) {
-	socket.clients[id].write(data)
+func (socket *Socket) Send(data []byte, id ClientId) error {
+	return socket.clients[id].write(data)
 }
 
 func (socket *Socket) Broadcast(data []byte) {

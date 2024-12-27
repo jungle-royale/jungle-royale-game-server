@@ -2,14 +2,12 @@ package game
 
 import (
 	"jungle-royale/message"
+	"jungle-royale/network"
 	"jungle-royale/object"
 	"jungle-royale/state"
 	"log"
-	"net/http"
-	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -20,20 +18,14 @@ const (
 )
 
 type Game struct {
-	state                *state.State
-	clients              map[string]*GameClient
-	clientChannel        chan *GameClient
-	clientMessageChannel chan *GameClientMessage
-	clientsMu            sync.Mutex
+	state  *state.State
+	socket network.Socket
 }
 
 func NewGame() *Game {
 	return &Game{
 		state.NewState(),
-		make(map[string]*GameClient),
-		make(chan *GameClient, MaxClientCount),
-		make(chan *GameClientMessage, MaxClientCount),
-		sync.Mutex{},
+		*network.NewSocket(),
 	}
 }
 
@@ -41,70 +33,24 @@ func (game *Game) StartGame() {
 	go game.CalcLoop()      // start main loop
 	go game.BroadcastLoop() // broadcast to client
 
-	// connection event handler
-	go func() {
-		for client := range game.clientChannel {
-			go game.SetPlayer(client)
-		}
-	}()
-
-	// message event handler
-	go func() {
-		for message := range game.clientMessageChannel {
-			go game.HandleMessage(message)
-		}
-	}()
-
-	game.InitSocket(func(w http.ResponseWriter, r *http.Request) {
-		var upgrader = websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-		}
-
-		// http → websocket upgrade
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Printf("Failed to upgrade to WebSocket: %v", err)
-			return
-		}
-		defer conn.Close()
-
-		newClient := NewGameClient(conn)
-
-		game.clientChannel <- newClient
-
-		log.Printf("Client %s connected", newClient.ID)
-
-		for {
-			messageType, data, err := conn.ReadMessage()
-			if err != nil {
-				log.Printf("Client %s disconnected: %v", newClient.ID, err)
-				break
-			}
-
-			game.clientMessageChannel <- NewGameClientMessage(messageType, newClient.ID, data)
-		}
+	game.socket.OnClient(func(id network.ClientId) {
+		// log.Printf("On Client: %s", string(id))
+		game.SetPlayer(string(id))
 	})
+
+	game.socket.OnMessage(func(clientId network.ClientId, data []byte) {
+		// log.Printf("On Message from %s", clientId) // prod/dev 분기 처리 필요
+		game.HandleMessage(string(clientId), data)
+	})
+
+	game.socket.Listen()
 }
 
-func (game *Game) InitSocket(handleWebSocket func(w http.ResponseWriter, r *http.Request)) {
-	http.HandleFunc("/ws", handleWebSocket)
-	if err := http.ListenAndServe(":8000", nil); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
-	}
-	log.Printf("Server listened in port 8000")
-}
-
-func (game *Game) SetPlayer(client *GameClient) {
-	game.clientsMu.Lock()
-	game.clients[client.ID] = client
-	game.clientsMu.Unlock()
-
-	game.state.AddPlayer(client.ID)
+func (game *Game) SetPlayer(clientId string) {
+	game.state.AddPlayer(clientId)
 
 	// send GameInit message
-	gameInit := &message.GameInit{Id: client.ID}
+	gameInit := &message.GameInit{Id: clientId}
 	data, err := proto.Marshal(&message.Wrapper{
 		MessageType: &message.Wrapper_GameInit{
 			GameInit: gameInit,
@@ -114,32 +60,32 @@ func (game *Game) SetPlayer(client *GameClient) {
 		log.Printf("Failed to marshal GameInit: %v", err)
 		return
 	}
-	if err := client.Conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
-		log.Printf("Failed to send GameInit message to client %s: %v", client.ID, err)
+	if err := game.socket.Send(data, network.ClientId(clientId)); err != nil {
+		log.Printf("Failed to send GameInit message to client %s: %v", clientId, err)
+		return
 	}
+
+	log.Printf("보낸겨: %s", gameInit.String())
 }
 
-func (game *Game) HandleMessage(clientMessage *GameClientMessage) {
-	if clientMessage.MessageType == websocket.BinaryMessage {
-		// Protobuf message decode
-		var wrapper message.Wrapper
-		if err := proto.Unmarshal(clientMessage.Data, &wrapper); err != nil {
-			log.Printf("Failed to unmarshal message from client %s: %v", clientMessage.ID, err)
-			return
-		}
+func (game *Game) HandleMessage(clientId string, data []byte) {
+	var wrapper message.Wrapper
+	if err := proto.Unmarshal(data, &wrapper); err != nil {
+		log.Printf("Failed to unmarshal message from client %s: %v", clientId, err)
+		return
+	}
 
-		// dirChange message
-		if dirChange := wrapper.GetDirChange(); dirChange != nil {
-			if value, exists := game.state.Players.Load(clientMessage.ID); exists {
-				player := value.(*object.Player)
-				go player.DirChange(float64(dirChange.GetAngle()), dirChange.IsMoved)
-			}
+	// dirChange message
+	if dirChange := wrapper.GetDirChange(); dirChange != nil {
+		if value, exists := game.state.Players.Load(clientId); exists {
+			player := value.(*object.Player)
+			go player.DirChange(float64(dirChange.GetAngle()), dirChange.IsMoved)
 		}
+	}
 
-		// bulletCreate message
-		if bulletCreate := wrapper.GetBulletCreate(); bulletCreate != nil {
-			game.state.AddBullet(bulletCreate)
-		}
+	// bulletCreate message
+	if bulletCreate := wrapper.GetBulletCreate(); bulletCreate != nil {
+		game.state.AddBullet(bulletCreate)
 	}
 }
 
@@ -186,14 +132,6 @@ func (game *Game) BroadcastLoop() {
 			return
 		}
 
-		game.clientsMu.Lock()
-		for id, client := range game.clients {
-			if err := client.Conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
-				log.Printf("Failed to send message to client %s: %v", client.ID, err)
-				client.Conn.Close()
-				delete(game.clients, id)
-			}
-		}
-		game.clientsMu.Unlock()
+		game.socket.Broadcast(data)
 	}
 }
