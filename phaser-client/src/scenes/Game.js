@@ -143,8 +143,12 @@ export class Game extends Scene {
 
         this.createGrid(1000, 1000, 50, 0x000000);
 
+        let testRoomId = "123123"
+
         // WebSocket 연결
-        this.socket = new WebSocket('ws://localhost:8000/ws');
+        this.socket = new WebSocket(`ws://localhost:8000/room?roomId=${testRoomId}`)
+
+        console.log(`ws://localhost:8000/ws?roomId=${testRoomId}`)
 
         // WebSocket 이벤트 처리
         this.socket.onopen = () => {

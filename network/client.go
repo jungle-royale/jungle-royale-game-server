@@ -8,13 +8,18 @@ import (
 type ClientId string
 
 type Client struct {
-	ID   ClientId
-	conn *websocket.Conn
+	ID     ClientId
+	RoomID RoomId
+	conn   *websocket.Conn
 }
 
-func NewClient(conn *websocket.Conn) *Client {
+func NewClient(roomId RoomId, conn *websocket.Conn) *Client {
 	id := uuid.New().String()
-	return &Client{ClientId(id), conn}
+	return &Client{
+		ClientId(id),
+		roomId,
+		conn,
+	}
 }
 
 func (client *Client) write(data []byte) error {
