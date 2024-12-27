@@ -19,31 +19,25 @@ const (
 
 type Game struct {
 	state  *state.State
-	socket network.Socket
+	socket *network.Socket
 }
 
-func NewGame() *Game {
-	return &Game{
+func NewGame(socket *network.Socket) *Game {
+	game := &Game{
 		state.NewState(),
-		*network.NewSocket(),
+		socket,
 	}
-}
-
-func (game *Game) StartGame() {
 	go game.CalcLoop()      // start main loop
 	go game.BroadcastLoop() // broadcast to client
+	return game
+}
 
-	game.socket.OnClient(func(id network.ClientId) {
-		// log.Printf("On Client: %s", string(id))
-		game.SetPlayer(string(id))
-	})
+func (game *Game) OnClient(clientId string) {
+	game.SetPlayer(clientId)
+}
 
-	game.socket.OnMessage(func(clientId network.ClientId, data []byte) {
-		// log.Printf("On Message from %s", clientId) // prod/dev 분기 처리 필요
-		game.HandleMessage(string(clientId), data)
-	})
-
-	game.socket.Listen()
+func (game *Game) OnMessage(data []byte, id string) {
+	game.HandleMessage(id, data)
 }
 
 func (game *Game) SetPlayer(clientId string) {
@@ -60,7 +54,8 @@ func (game *Game) SetPlayer(clientId string) {
 		log.Printf("Failed to marshal GameInit: %v", err)
 		return
 	}
-	if err := game.socket.Send(data, network.ClientId(clientId)); err != nil {
+
+	if err := (*game.socket).Send(data, clientId); err != nil {
 		log.Printf("Failed to send GameInit message to client %s: %v", clientId, err)
 		return
 	}
@@ -132,6 +127,6 @@ func (game *Game) BroadcastLoop() {
 			return
 		}
 
-		game.socket.Broadcast(data)
+		(*game.socket).Broadcast(data)
 	}
 }
