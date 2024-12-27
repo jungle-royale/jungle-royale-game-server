@@ -76,6 +76,15 @@ class Bullet {
     }
 }
 
+function sendDashMessage(socket) {
+    const dash = new message.DoDash();
+    dash.setDash(true);
+    const wrapper = new message.Wrapper();
+    wrapper.setDodash(dash);
+    const binaryData = wrapper.serializeBinary();
+    socket.send(binaryData);
+}
+
 function sendChangeMessage(socket, angle, isMoved) {
 
     // console.log("send change ", angle);
@@ -86,13 +95,13 @@ function sendChangeMessage(socket, angle, isMoved) {
     }
 
     // Change 메시지 생성
-    const change = new message.DirChange();
+    const change = new message.ChangeDir();
     change.setAngle(angle);
     change.setIsmoved(isMoved);
 
     // Wrapper 메시지 생성
     const wrapper = new message.Wrapper();
-    wrapper.setDirchange(change);
+    wrapper.setChangedir(change);
 
     // 직렬화하여 바이너리 데이터로 변환
     const binaryData = wrapper.serializeBinary();
@@ -135,6 +144,7 @@ export class Game extends Scene {
         this.bullets = {};
         this.last_x = 0;
         this.last_y = 0;
+        this.dash = false;
     }
 
     create() {
@@ -226,21 +236,29 @@ export class Game extends Scene {
         });
 
         this.cameras.main.setZoom(15)
+
+        this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.keys = this.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D
+        });
     }
 
     update() {
         let x = 0;
         let y = 0;
-        if (this.cursors.left.isDown) {
+        if (this.cursors.left.isDown || this.keys.left.isDown) {
             x -= 5.0;
         }
-        if (this.cursors.right.isDown) {
+        if (this.cursors.right.isDown || this.keys.right.isDown) {
             x += 5.0;
         }
-        if (this.cursors.up.isDown) {
+        if (this.cursors.up.isDown || this.keys.up.isDown) {
             y -= 5.0;
         }
-        if (this.cursors.down.isDown) {
+        if (this.cursors.down.isDown || this.keys.down.isDown) {
             y += 5.0;
         }
         if (this.last_x != x || this.last_y != y) {
@@ -265,6 +283,13 @@ export class Game extends Scene {
                 sendChangeMessage(this.socket, 270, true);
             else if (x == -5 && y == -5)
                 sendChangeMessage(this.socket, 315, true);
+        }
+        if (this.spaceKey.isDown && this.dash == false) {
+            this.dash = true
+            sendDashMessage(this.socket);
+        }
+        else if(this.dash == true) {
+            this.dash = false;
         }
     }
 

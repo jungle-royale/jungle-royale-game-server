@@ -14,12 +14,6 @@ import (
 )
 
 const (
-	MaxClientCount        = 100
-	CalcLoopInterval      = 16
-	BroadCastLoopInterval = 16
-)
-
-const (
 	waiting = iota
 	counting
 	playing
@@ -105,7 +99,7 @@ func (game *Game) SetPlayer(clientId string) {
 }
 
 func (game *Game) CalcGameTickLoop() {
-	ticker := time.NewTicker(CalcLoopInterval * time.Millisecond)
+	ticker := time.NewTicker(cons.CalcLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C { // calculation loop
@@ -146,7 +140,7 @@ func (game *Game) CalcSecLoop() {
 }
 
 func (game *Game) BroadcastLoop() {
-	ticker := time.NewTicker(BroadCastLoopInterval * time.Millisecond)
+	ticker := time.NewTicker(cons.BroadCastLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C { // broadcast loop
