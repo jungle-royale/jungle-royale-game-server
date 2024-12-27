@@ -1,17 +1,21 @@
 package state
 
 import (
+	"jungle-royale/chunk"
+	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/object"
-	"math/rand"
 	"sync"
 
 	"github.com/google/uuid"
 )
 
 type State struct {
-	Players sync.Map
-	Bullets sync.Map
+	chunkNum  int
+	chunkList [][]*chunk.Chunk
+	MaxCoord  float32
+	Players   sync.Map
+	Bullets   sync.Map
 }
 
 func NewState() *State {
@@ -21,16 +25,28 @@ func NewState() *State {
 	}
 }
 
-func (state *State) AddPlayer(id string) {
+func (state *State) SetState(chunkNum int) {
+	state.chunkNum = chunkNum
+	state.chunkList = make([][]*chunk.Chunk, chunkNum)
+	for i := 0; i < chunkNum; i++ {
+		state.chunkList[i] = make([]*chunk.Chunk, chunkNum)
+		for j := 0; j < chunkNum; j++ {
+			state.chunkList[i][j] = chunk.NewChunk()
+		}
+	}
+	state.MaxCoord = float32(chunkNum * cons.CHUNK_LENGTH)
+}
+
+func (state *State) AddPlayer(id string, x float32, y float32) {
 	newPlayer := object.NewPlayer(
 		id,
-		float32(rand.Intn(1000)),
-		float32(rand.Intn(1000)),
+		x,
+		y,
 	)
 	state.Players.Store(id, newPlayer)
 }
 
-func (state *State) AddBullet(BulletCreateMessage *message.BulletCreate) {
+func (state *State) AddBullet(BulletCreateMessage *message.CreateBullet) {
 	bulletId := uuid.New().String()
 	newBullet := object.NewBullet(
 		bulletId,
@@ -52,7 +68,7 @@ func (state *State) GetPlayers() map[string]*object.Player {
 	return players
 }
 
-func (state *State) CalcState() {
+func (state *State) CalcGameTickState() {
 
 	state.Players.Range(func(key, value any) bool {
 		playerId := key.(string)
@@ -74,4 +90,8 @@ func (state *State) CalcState() {
 		}
 		return true
 	})
+}
+
+func (state *State) SecLoop() {
+
 }

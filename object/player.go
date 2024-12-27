@@ -5,7 +5,8 @@ import (
 	"math"
 )
 
-const PLAYER_SPEED = 5
+const PLAYER_SPEED = 0.3
+const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
 
 type Player struct {
@@ -19,7 +20,12 @@ type Player struct {
 }
 
 func NewPlayer(id string, x float32, y float32) *Player {
-	return &Player{id, x, y, 30, 0, false, 100}
+	return &Player{id, x, y, PLAYER_RADIOUS, 0, false, 100}
+}
+
+func (player *Player) SetLocation(x float32, y float32) {
+	player.x = x
+	player.y = y
 }
 
 func (player *Player) Move() {
@@ -41,8 +47,8 @@ func (player *Player) DirChange(angle float64, isMoved bool) {
 	player.isMoved = isMoved
 }
 
-func (player *Player) MakeSendingData() *message.Player {
-	return &message.Player{
+func (player *Player) MakeSendingData() *message.PlayerState {
+	return &message.PlayerState{
 		Id: player.id,
 		X:  player.x,
 		Y:  player.y,

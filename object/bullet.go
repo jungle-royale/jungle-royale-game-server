@@ -6,8 +6,8 @@ import (
 	"math"
 )
 
-const BULLET_SPEED = 20.0
-const BULLET_RANGE = 500.0
+const BULLET_SPEED = 1
+const BULLET_RANGE = 10.0
 const BULLET_DAMAGE = 20
 const BULLET_MAX_TICK = BULLET_RANGE / BULLET_SPEED
 
