@@ -21,7 +21,7 @@ type Bullet struct {
 	dy             float32
 	lastTick       int
 	isValid        bool
-	collisionList  map[string]*Player
+	collisionList  []int
 	physicalObject physical.Physical
 }
 
@@ -31,7 +31,6 @@ func NewBullet(
 	startX float32,
 	startY float32,
 	angle float64,
-	collisionList map[string]*Player,
 ) *Bullet {
 	dx := float32(BULLET_SPEED * math.Sin(angle*(math.Pi/180)))
 	dy := -1 * float32(BULLET_SPEED*math.Cos(angle*(math.Pi/180)))
@@ -43,34 +42,44 @@ func NewBullet(
 		dy,
 		BULLET_MAX_TICK,
 		true,
-		collisionList,
-		physical.NewCircle(startX, startY, BULLET_RADIOUS),
+		[]int{ObjectPlayer},
+		physical.NewCircle(startX+dx, startY+dy, BULLET_RADIOUS),
 	}
 }
 
-func (bullet *Bullet) CalcCollision() bool {
-	for id := range bullet.collisionList {
-		player := bullet.collisionList[id]
-		if bullet.playerId == player.id {
-			continue
-		}
+func (bullet *Bullet) CalcCollision(objectMapList *SyncMapList) *Collider {
 
-		if bullet.physicalObject.Collide(player.physicalObject) {
-			player.health -= BULLET_DAMAGE
-			return true
-		}
+	var ret Collider
+	flag := false
+	for _, c := range bullet.collisionList {
+		objectMapList.objectLists[c].Map.Range(func(key, value any) bool {
+			switch v := value.(type) {
+			case *Player:
+				if bullet.physicalObject.IsCollide((*v).getPhysical()) {
+					ret = v
+					flag = true
+					return false
+				} else {
+					return true
+				}
+			default:
+				return true
+			}
+		})
 	}
-	return false
+
+	if flag {
+		return &ret
+	} else {
+		return nil
+	}
 }
 
 func (bullet *Bullet) CalcGameTick() {
 	bullet.mu.Lock()
 	bullet.physicalObject.Move(bullet.dx, bullet.dy)
 	bullet.lastTick--
-	if bullet.CalcCollision() {
-		bullet.isValid = false
-	}
-	if bullet.lastTick < 0 {
+	if bullet.lastTick <= 0 {
 		bullet.isValid = false
 	}
 	bullet.mu.Unlock()
@@ -86,4 +95,8 @@ func (bullet *Bullet) MakeSendingData() *message.BulletState {
 		X:        bullet.physicalObject.GetX(),
 		Y:        bullet.physicalObject.GetY(),
 	}
+}
+
+func (bullet *Bullet) getPhysical() *physical.Physical {
+	return &bullet.physicalObject
 }

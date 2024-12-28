@@ -1,6 +1,7 @@
 package object
 
 import (
+	"jungle-royale/object/physical"
 	"reflect"
 	"sync"
 
@@ -8,19 +9,19 @@ import (
 )
 
 // Mover object enum
-const MOVER_NUM = 2
+const OBJECT_NUM = 2
+const MOVER_OBJECT_NUM = 2
 const (
 	ObjectPlayer = iota
-	ObjectBullet
+	ObjectBullet // mover object first
 )
 
-// Non mover object enum
-const NONMOVER_NUM = 0
-const ()
+type Collider interface {
+	getPhysical() *physical.Physical
+}
 
 type Mover interface {
 	CalcGameTick() // move, collision
-	CalcCollision()
 	MakeSendingData() *proto.Message
 	IsValid() bool
 }
@@ -41,23 +42,23 @@ func NewObjectSyncMap(t reflect.Type) *ObjectSyncMap {
 	}
 }
 
-type MoverSyncMapList struct {
-	list []*ObjectSyncMap
+type SyncMapList struct {
+	objectLists map[int]*ObjectSyncMap
 }
 
-func NewMoverSyncMapList() *MoverSyncMapList {
+func NewMoverSyncMapList() *SyncMapList {
 
-	list := make([]*ObjectSyncMap, 0)
-	list = append(list, NewObjectSyncMap(reflect.TypeOf(Player{})))
-	list = append(list, NewObjectSyncMap(reflect.TypeOf(Bullet{})))
+	list := make(map[int]*ObjectSyncMap)
+	list[ObjectPlayer] = NewObjectSyncMap(reflect.TypeOf(Player{}))
+	list[ObjectBullet] = NewObjectSyncMap(reflect.TypeOf(Bullet{}))
 
-	return &MoverSyncMapList{list}
+	return &SyncMapList{list}
 }
 
-func (mlist *MoverSyncMapList) GetPlayers() *sync.Map {
-	return &mlist.list[ObjectPlayer].Map
+func (mlist *SyncMapList) GetPlayers() *sync.Map {
+	return &mlist.objectLists[ObjectPlayer].Map
 }
 
-func (mlist *MoverSyncMapList) GetBullets() *sync.Map {
-	return &mlist.list[ObjectBullet].Map
+func (mlist *SyncMapList) GetBullets() *sync.Map {
+	return &mlist.objectLists[ObjectBullet].Map
 }

@@ -10,15 +10,15 @@ import (
 )
 
 type State struct {
-	chunkNum  int
-	chunkList [][]*chunk.Chunk
-	MaxCoord  float32
-	MoverList *object.MoverSyncMapList
+	chunkNum   int
+	chunkList  [][]*chunk.Chunk
+	MaxCoord   float32
+	ObjectList *object.SyncMapList
 }
 
 func NewState() *State {
 	return &State{
-		MoverList: object.NewMoverSyncMapList(),
+		ObjectList: object.NewMoverSyncMapList(),
 	}
 }
 
@@ -40,7 +40,7 @@ func (state *State) AddPlayer(id string, x float32, y float32) {
 		x,
 		y,
 	)
-	state.MoverList.GetPlayers().Store(id, newPlayer)
+	state.ObjectList.GetPlayers().Store(id, newPlayer)
 }
 
 func (state *State) AddBullet(BulletCreateMessage *message.CreateBullet) {
@@ -51,46 +51,6 @@ func (state *State) AddBullet(BulletCreateMessage *message.CreateBullet) {
 		BulletCreateMessage.StartX,
 		BulletCreateMessage.StartY,
 		float64(BulletCreateMessage.Angle),
-		state.GetPlayers(),
 	)
-	state.MoverList.GetBullets().Store(bulletId, newBullet)
-}
-
-func (state *State) GetPlayers() map[string]*object.Player {
-	players := make(map[string]*object.Player)
-	state.MoverList.GetPlayers().Range(func(key, value any) bool {
-		players[key.(string)] = value.(*object.Player)
-		return true
-	})
-	return players
-}
-
-func (state *State) CalcGameTickState() {
-
-	// player
-	state.MoverList.GetPlayers().Range(func(key, value any) bool {
-		playerId := key.(string)
-		player := value.(*object.Player)
-		if !player.IsValid() {
-			state.MoverList.GetPlayers().Delete(playerId)
-			return true
-		}
-		player.CalcGameTick()
-		return true
-	})
-
-	// bullet
-	state.MoverList.GetBullets().Range(func(key, value any) bool {
-		bulletId := key.(string)
-		bullet := value.(*object.Bullet)
-		bullet.CalcGameTick()
-		if !bullet.IsValid() {
-			state.MoverList.GetBullets().Delete(bulletId)
-		}
-		return true
-	})
-}
-
-func (state *State) SecLoop() {
-
+	state.ObjectList.GetBullets().Store(bulletId, newBullet)
 }
