@@ -29,9 +29,9 @@ func (circle *Circle) pointInCircle(x float32, y float32) bool {
 	}
 }
 
-func (obj *Circle) Collide(opponent Physical) bool { // opponent is pointer
+func (obj *Circle) IsCollide(opponent *Physical) bool { // opponent is pointer
 
-	switch opp := opponent.(type) {
+	switch opp := (*opponent).(type) {
 
 	case *Circle:
 		distanceSquared := math.Pow(float64(obj.X-opp.X), 2) + math.Pow(float64(obj.Y-opp.Y), 2)

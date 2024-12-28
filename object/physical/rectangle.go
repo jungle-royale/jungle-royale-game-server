@@ -29,9 +29,9 @@ func (rectangle *Rectangle) pointInRectangle(x float32, y float32) bool {
 	}
 }
 
-func (obj *Rectangle) Collide(opponent Physical) bool { // opponent is pointer
+func (obj *Rectangle) IsCollide(opponent *Physical) bool { // opponent is pointer
 
-	switch opp := opponent.(type) {
+	switch opp := (*opponent).(type) {
 
 	case *Circle:
 		if opp.pointInCircle(obj.X, obj.Y) ||

@@ -13,7 +13,7 @@ import (
 const PLAYER_SPEED = 0.3
 const DASH_SPEED = 1.2
 const DASH_TICK = 5
-const DASH_COOLTIME = 120 // 2sec
+const DASH_COOLTIME = 90 // 1.5sec
 const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
 
@@ -106,4 +106,8 @@ func (player *Player) DoDash() {
 			player.mu.Unlock()
 		})
 	}
+}
+
+func (player *Player) getPhysical() *physical.Physical {
+	return &player.physicalObject
 }

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"jungle-royale/calculator"
 	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/network"
@@ -24,14 +25,17 @@ type Game struct {
 	minPlayerNum int
 	playerNum    int
 	state        *state.State
+	calculator   *calculator.Calculator
 	socket       *network.Socket
 }
 
 func NewGame(socket *network.Socket, minPlayerNum int) *Game {
+	gameState := state.NewState()
 	game := &Game{
 		minPlayerNum: minPlayerNum,
 		playerNum:    0,
-		state:        state.NewState(),
+		state:        gameState,
+		calculator:   calculator.NewCalculator(gameState),
 		socket:       socket,
 	}
 
@@ -47,7 +51,7 @@ func (game *Game) SetReadyStatus() *Game {
 func (game *Game) SetPlayingStatus() *Game {
 	game.gameState = playing
 	game.state.SetState(game.playerNum * game.playerNum)
-	game.state.MoverList.GetPlayers().Range(func(key, value any) bool {
+	game.state.ObjectList.GetPlayers().Range(func(key, value any) bool {
 		player := value.(*object.Player)
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
@@ -103,7 +107,7 @@ func (game *Game) CalcGameTickLoop() {
 	defer ticker.Stop()
 
 	for range ticker.C { // calculation loop
-		game.state.CalcGameTickState()
+		game.calculator.CalcGameTickState()
 	}
 }
 
@@ -135,7 +139,7 @@ func (game *Game) CalcSecLoop() {
 				game.SetPlayingStatus()
 			}
 		}
-		game.state.SecLoop()
+		game.calculator.SecLoop()
 	}
 }
 
@@ -145,14 +149,14 @@ func (game *Game) BroadcastLoop() {
 
 	for range ticker.C { // broadcast loop
 		playerList := make([]*message.PlayerState, 0)
-		game.state.MoverList.GetPlayers().Range(func(key, value any) bool {
+		game.state.ObjectList.GetPlayers().Range(func(key, value any) bool {
 			player := value.(*object.Player)
 			playerList = append(playerList, player.MakeSendingData())
 			return true
 		})
 
 		bulletList := make([]*message.BulletState, 0)
-		game.state.MoverList.GetBullets().Range(func(key, value any) bool {
+		game.state.ObjectList.GetBullets().Range(func(key, value any) bool {
 			bullet := value.(*object.Bullet)
 			bulletList = append(bulletList, bullet.MakeSendingData())
 			return true

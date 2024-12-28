@@ -2,7 +2,7 @@ package physical
 
 // nonmoving object
 type Physical interface {
-	Collide(opponent Physical) bool
+	IsCollide(opponent *Physical) bool
 	Move(dx float32, dy float32)
 	GetX() float32
 	GetY() float32
