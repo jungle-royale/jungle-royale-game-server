@@ -47,7 +47,7 @@ func (game *Game) SetReadyStatus() *Game {
 func (game *Game) SetPlayingStatus() *Game {
 	game.gameState = playing
 	game.state.SetState(game.playerNum * game.playerNum)
-	game.state.Players.Range(func(key, value any) bool {
+	game.state.MoverList.GetPlayers().Range(func(key, value any) bool {
 		player := value.(*object.Player)
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
@@ -145,14 +145,14 @@ func (game *Game) BroadcastLoop() {
 
 	for range ticker.C { // broadcast loop
 		playerList := make([]*message.PlayerState, 0)
-		game.state.Players.Range(func(key, value any) bool {
+		game.state.MoverList.GetPlayers().Range(func(key, value any) bool {
 			player := value.(*object.Player)
 			playerList = append(playerList, player.MakeSendingData())
 			return true
 		})
 
 		bulletList := make([]*message.BulletState, 0)
-		game.state.Bullets.Range(func(key, value any) bool {
+		game.state.MoverList.GetBullets().Range(func(key, value any) bool {
 			bullet := value.(*object.Bullet)
 			bulletList = append(bulletList, bullet.MakeSendingData())
 			return true
