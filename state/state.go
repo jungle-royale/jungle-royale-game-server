@@ -5,7 +5,6 @@ import (
 	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/object"
-	"sync"
 
 	"github.com/google/uuid"
 )
@@ -14,14 +13,12 @@ type State struct {
 	chunkNum  int
 	chunkList [][]*chunk.Chunk
 	MaxCoord  float32
-	Players   sync.Map
-	Bullets   sync.Map
+	MoverList *object.MoverSyncMapList
 }
 
 func NewState() *State {
 	return &State{
-		Players: sync.Map{},
-		Bullets: sync.Map{},
+		MoverList: object.NewMoverSyncMapList(),
 	}
 }
 
@@ -43,7 +40,7 @@ func (state *State) AddPlayer(id string, x float32, y float32) {
 		x,
 		y,
 	)
-	state.Players.Store(id, newPlayer)
+	state.MoverList.GetPlayers().Store(id, newPlayer)
 }
 
 func (state *State) AddBullet(BulletCreateMessage *message.CreateBullet) {
@@ -56,12 +53,12 @@ func (state *State) AddBullet(BulletCreateMessage *message.CreateBullet) {
 		float64(BulletCreateMessage.Angle),
 		state.GetPlayers(),
 	)
-	state.Bullets.Store(bulletId, newBullet)
+	state.MoverList.GetBullets().Store(bulletId, newBullet)
 }
 
 func (state *State) GetPlayers() map[string]*object.Player {
 	players := make(map[string]*object.Player)
-	state.Players.Range(func(key, value any) bool {
+	state.MoverList.GetPlayers().Range(func(key, value any) bool {
 		players[key.(string)] = value.(*object.Player)
 		return true
 	})
@@ -70,23 +67,25 @@ func (state *State) GetPlayers() map[string]*object.Player {
 
 func (state *State) CalcGameTickState() {
 
-	state.Players.Range(func(key, value any) bool {
+	// player
+	state.MoverList.GetPlayers().Range(func(key, value any) bool {
 		playerId := key.(string)
 		player := value.(*object.Player)
 		if !player.IsValid() {
-			state.Players.Delete(playerId)
+			state.MoverList.GetPlayers().Delete(playerId)
 			return true
 		}
-		player.Move()
+		player.CalcGameTick()
 		return true
 	})
 
-	state.Bullets.Range(func(key, value any) bool {
+	// bullet
+	state.MoverList.GetBullets().Range(func(key, value any) bool {
 		bulletId := key.(string)
 		bullet := value.(*object.Bullet)
-		isValid := bullet.Move()
-		if !isValid {
-			state.Bullets.Delete(bulletId)
+		bullet.CalcGameTick()
+		if !bullet.IsValid() {
+			state.MoverList.GetBullets().Delete(bulletId)
 		}
 		return true
 	})

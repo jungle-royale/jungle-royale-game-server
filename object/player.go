@@ -3,6 +3,7 @@ package object
 import (
 	"jungle-royale/cons"
 	"jungle-royale/message"
+	"jungle-royale/object/physical"
 	"log"
 	"math"
 	"sync"
@@ -17,50 +18,51 @@ const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
 
 type Player struct {
-	mu           sync.Mutex
-	id           string
-	x            float32
-	y            float32
-	radious      float32
-	angle        float64 // degree
-	speed        float32
-	isMoveing    bool
-	isDashing    bool
-	dashCoolTime int
-	health       int
+	mu             sync.Mutex
+	id             string
+	angle          float64 // degree
+	speed          float32
+	isMoveing      bool
+	isDashing      bool
+	dashCoolTime   int
+	health         int
+	physicalObject physical.Physical
 }
 
 func NewPlayer(id string, x float32, y float32) *Player {
+
 	return &Player{
 		sync.Mutex{},
 		id,
-		x,
-		y,
-		PLAYER_RADIOUS,
 		0,
 		PLAYER_SPEED,
 		false,
 		false,
 		0,
 		100,
+		physical.NewCircle(x, y, PLAYER_RADIOUS),
 	}
 }
 
 func (player *Player) SetLocation(x float32, y float32) {
 	player.mu.Lock()
-	player.x = x
-	player.y = y
+	player.physicalObject.SetCoord(x, y)
 	player.mu.Unlock()
 }
 
-func (player *Player) Move() {
+func (player *Player) CalcGameTick() {
 	player.mu.Lock()
 	if player.isMoveing {
-		player.x += player.speed * float32(math.Sin(player.angle*(math.Pi/180)))
-		player.y -= player.speed * float32(math.Cos(player.angle*(math.Pi/180)))
+		dx := player.speed * float32(math.Sin(player.angle*(math.Pi/180)))
+		dy := player.speed * float32(math.Cos(player.angle*(math.Pi/180))) * -1
+		player.physicalObject.Move(dx, dy)
 		player.dashCoolTime--
 	}
 	player.mu.Unlock()
+}
+
+func (player *Player) CalcCollision() {
+
 }
 
 func (player *Player) IsValid() bool {
@@ -77,8 +79,8 @@ func (player *Player) DirChange(angle float64, isMoved bool) {
 func (player *Player) MakeSendingData() *message.PlayerState {
 	return &message.PlayerState{
 		Id: player.id,
-		X:  player.x,
-		Y:  player.y,
+		X:  player.physicalObject.GetX(),
+		Y:  player.physicalObject.GetY(),
 	}
 }
 
