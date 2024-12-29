@@ -8,10 +8,21 @@ import (
 )
 
 const BULLET_SPEED = 1
-const BULLET_RANGE = 10.0
+const BULLET_RANGE = 20.0
 const BULLET_DAMAGE = 20
 const BULLET_RADIOUS = 0.2
 const BULLET_MAX_TICK = BULLET_RANGE / BULLET_SPEED
+
+// bullet type (= magic type)
+const (
+	BULLET_NONE = iota
+	BULLET_STONE
+	BULLET_FIRE
+)
+
+const BULLET_STONE_DAMAGE = 30
+const BULLET_FIRE_SEC_DAMAGE = 3
+const BULLET_FIRE_LAST_SEC = 5
 
 type Bullet struct {
 	mu             sync.Mutex
@@ -20,6 +31,7 @@ type Bullet struct {
 	dx             float32
 	dy             float32
 	lastTick       int
+	BulletType     int
 	isValid        bool
 	collisionList  []int
 	physicalObject physical.Physical
@@ -28,6 +40,7 @@ type Bullet struct {
 func NewBullet(
 	bulletId string,
 	playerId string,
+	magicType int,
 	startX float32,
 	startY float32,
 	angle float64,
@@ -41,6 +54,7 @@ func NewBullet(
 		dx,
 		dy,
 		BULLET_MAX_TICK,
+		magicType,
 		true,
 		[]int{ObjectPlayer},
 		physical.NewCircle(startX+dx, startY+dy, BULLET_RADIOUS),

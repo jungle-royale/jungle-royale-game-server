@@ -68,7 +68,17 @@ func (game *Game) SetPlayingStatus() *Game {
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
 		newHealPack := object.NewHealPack(x, y)
-		game.state.ObjectList.GetHealPack().Store(newHealPack.Id, newHealPack)
+		game.state.ObjectList.GetHealPacks().Store(newHealPack.Id, newHealPack)
+	}
+
+	// magic item setting
+	for i := 0; i < game.playerNum*game.playerNum/2; i++ {
+		x := float32(rand.Intn(int(game.state.MaxCoord)))
+		y := float32(rand.Intn(int(game.state.MaxCoord)))
+		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y)
+		newFireItem := object.NewMagicItem(object.FIRE_MAGIC, x, y)
+		game.state.ObjectList.GetMagicItems().Store(newStoneItem.ItemId, newStoneItem)
+		game.state.ObjectList.GetMagicItems().Store(newFireItem.ItemId, newFireItem)
 	}
 	return game
 }
@@ -175,9 +185,16 @@ func (game *Game) BroadcastLoop() {
 		})
 
 		healPackList := make([]*message.HealPackState, 0)
-		game.state.ObjectList.GetHealPack().Range(func(key, value any) bool {
+		game.state.ObjectList.GetHealPacks().Range(func(key, value any) bool {
 			healPack := value.(*object.HealPack)
 			healPackList = append(healPackList, healPack.MakeSendingData())
+			return true
+		})
+
+		magieItemList := make([]*message.MagicItemState, 0)
+		game.state.ObjectList.GetMagicItems().Range(func(key, value any) bool {
+			magieItem := value.(*object.Magic)
+			magieItemList = append(magieItemList, magieItem.MakeSendingData())
 			return true
 		})
 
