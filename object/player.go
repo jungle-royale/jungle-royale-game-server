@@ -26,6 +26,7 @@ type Player struct {
 	isDashing      bool
 	dashCoolTime   int
 	health         int
+	MagicType      int
 	collisionList  []int
 	physicalObject physical.Physical
 }
@@ -41,7 +42,8 @@ func NewPlayer(id string, x float32, y float32) *Player {
 		false,
 		0,
 		100,
-		[]int{ObjectHealPack},
+		NONE_MAGIC,
+		[]int{ObjectHealPack, ObjectMagicItem},
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
 	}
 }
@@ -77,6 +79,14 @@ func (player *Player) CalcCollision(objectMapList *SyncMapList) *Collider {
 				} else {
 					return true
 				}
+			case *Magic:
+				if player.physicalObject.IsCollide((*v).getPhysical()) {
+					ret = v
+					flag = true
+					return false
+				} else {
+					return true
+				}
 			default:
 				return true
 			}
@@ -103,17 +113,40 @@ func (player *Player) DirChange(angle float64, isMoved bool) {
 
 func (player *Player) MakeSendingData() *message.PlayerState {
 	return &message.PlayerState{
-		Id:     player.id,
-		X:      player.physicalObject.GetX(),
-		Y:      player.physicalObject.GetY(),
-		Health: int32(player.health),
+		Id:        player.id,
+		X:         player.physicalObject.GetX(),
+		Y:         player.physicalObject.GetY(),
+		Health:    int32(player.health),
+		MagicType: int32(player.MagicType),
 	}
 }
 
-func (player *Player) HeatedBullet() {
-	player.mu.Lock()
-	player.health -= BULLET_DAMAGE
-	player.mu.Unlock()
+func (player *Player) HeatedBullet(bulletType int) {
+	if bulletType == BULLET_NONE {
+		player.mu.Lock()
+		player.health -= BULLET_DAMAGE
+		player.mu.Unlock()
+	} else if bulletType == BULLET_STONE {
+		player.mu.Lock()
+		player.health -= BULLET_STONE_DAMAGE
+		player.mu.Unlock()
+	} else if bulletType == BULLET_FIRE {
+		player.mu.Lock()
+		player.health -= BULLET_DAMAGE
+		player.mu.Unlock()
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		count := BULLET_FIRE_LAST_SEC
+		for range ticker.C {
+			if count <= 0 {
+				break
+			}
+			player.mu.Lock()
+			player.health -= BULLET_FIRE_SEC_DAMAGE
+			player.mu.Unlock()
+			count--
+		}
+	}
 }
 
 func (player *Player) GetHealPack() {
@@ -122,6 +155,12 @@ func (player *Player) GetHealPack() {
 	if player.health >= 100 {
 		player.health = 100
 	}
+	player.mu.Unlock()
+}
+
+func (player *Player) GetMagic(magicType int) {
+	player.mu.Lock()
+	player.MagicType = magicType
 	player.mu.Unlock()
 }
 

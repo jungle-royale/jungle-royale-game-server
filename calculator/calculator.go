@@ -29,7 +29,7 @@ func (calculator *Calculator) CalcGameTickState() {
 			calculator.state.ObjectList.GetBullets().Delete(playerId)
 			if healPack, ok := (*collider).(*object.HealPack); ok {
 				player.GetHealPack()
-				calculator.state.ObjectList.GetHealPack().Delete(healPack.Id)
+				calculator.state.ObjectList.GetHealPacks().Delete(healPack.Id)
 			}
 		}
 		return true
@@ -44,7 +44,7 @@ func (calculator *Calculator) CalcGameTickState() {
 		if collider := bullet.CalcCollision(calculator.state.ObjectList); collider != nil {
 			calculator.state.ObjectList.GetBullets().Delete(bulletId)
 			if player, ok := (*collider).(*object.Player); ok {
-				player.HeatedBullet()
+				player.HeatedBullet(bullet.BulletType)
 			}
 		}
 		if !bullet.IsValid() {

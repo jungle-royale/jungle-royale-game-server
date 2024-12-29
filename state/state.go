@@ -45,12 +45,16 @@ func (state *State) AddPlayer(id string, x float32, y float32) {
 
 func (state *State) AddBullet(BulletCreateMessage *message.CreateBullet) {
 	bulletId := uuid.New().String()
-	newBullet := object.NewBullet(
-		bulletId,
-		BulletCreateMessage.PlayerId,
-		BulletCreateMessage.StartX,
-		BulletCreateMessage.StartY,
-		float64(BulletCreateMessage.Angle),
-	)
-	state.ObjectList.GetBullets().Store(bulletId, newBullet)
+	if value, exists := state.ObjectList.GetPlayers().Load(BulletCreateMessage.PlayerId); exists {
+		player := value.(*object.Player)
+		newBullet := object.NewBullet(
+			bulletId,
+			BulletCreateMessage.PlayerId,
+			player.MagicType,
+			BulletCreateMessage.StartX,
+			BulletCreateMessage.StartY,
+			float64(BulletCreateMessage.Angle),
+		)
+		state.ObjectList.GetBullets().Store(bulletId, newBullet)
+	}
 }

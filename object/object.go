@@ -18,6 +18,7 @@ const (
 
 	// nonmover object
 	ObjectHealPack
+	ObjectMagicItem
 )
 
 type Collider interface {
@@ -56,6 +57,7 @@ func NewMoverSyncMapList() *SyncMapList {
 	list[ObjectPlayer] = NewObjectSyncMap(reflect.TypeOf(Player{}))
 	list[ObjectBullet] = NewObjectSyncMap(reflect.TypeOf(Bullet{}))
 	list[ObjectHealPack] = NewObjectSyncMap((reflect.TypeOf(HealPack{})))
+	list[ObjectMagicItem] = NewObjectSyncMap((reflect.TypeOf(Magic{})))
 
 	return &SyncMapList{list}
 }
@@ -68,8 +70,12 @@ func (mlist *SyncMapList) GetBullets() *sync.Map {
 	return &mlist.objectLists[ObjectBullet].Map
 }
 
-func (mlist *SyncMapList) GetHealPack() *sync.Map {
+func (mlist *SyncMapList) GetHealPacks() *sync.Map {
 	return &mlist.objectLists[ObjectHealPack].Map
+}
+
+func (mlist *SyncMapList) GetMagicItems() *sync.Map {
+	return &mlist.objectLists[ObjectMagicItem].Map
 }
 
 type Item interface {
