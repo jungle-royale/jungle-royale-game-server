@@ -88,6 +88,7 @@ func (game *Game) StartGame() *Game {
 	return game
 }
 
+// Room Interface
 func (game *Game) OnClient(clientId string) {
 	if game.gameState == waiting {
 		game.playerNum++
@@ -209,5 +210,32 @@ func (game *Game) BroadcastLoop() {
 		}
 
 		(*game.socket).Broadcast(data)
+	}
+}
+
+// Room Interface
+func (game *Game) OnMessage(data []byte, id string) {
+	game.handleMessage(id, data)
+}
+
+func (game *Game) handleMessage(clientId string, data []byte) {
+	var wrapper message.Wrapper
+	if err := proto.Unmarshal(data, &wrapper); err != nil {
+		log.Printf("Failed to unmarshal message from client %s: %v", clientId, err)
+		return
+	}
+
+	// dirChange message
+	if dirChange := wrapper.GetChangeDir(); dirChange != nil {
+		game.state.ChangeDirection(clientId, dirChange)
+	}
+
+	if doDash := wrapper.GetDoDash(); doDash != nil {
+		game.state.DoDash(clientId, doDash)
+	}
+
+	// bulletCreate message
+	if createBullet := wrapper.GetCreateBullet(); createBullet != nil {
+		game.state.CreateBullet(clientId, createBullet)
 	}
 }

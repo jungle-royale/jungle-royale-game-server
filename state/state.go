@@ -64,3 +64,19 @@ func (state *State) AddBullet(BulletCreateMessage *message.CreateBullet) {
 		state.Bullets.Store(bulletId, newBullet)
 	}
 }
+
+func (state *State) ChangeDirection(clientId string, msg *message.ChangeDir) {
+	if player, exists := state.Players.Get(clientId); exists {
+		(*player).DirChange(float64(msg.GetAngle()), msg.IsMoved)
+	}
+}
+
+func (state *State) CreateBullet(clientId string, msg *message.CreateBullet) {
+	state.AddBullet(msg)
+}
+
+func (state *State) DoDash(clientId string, msg *message.DoDash) {
+	if player, exists := state.Players.Get(clientId); exists {
+		(*player).DoDash()
+	}
+}
