@@ -25,14 +25,28 @@ type Collider interface {
 	getPhysical() *physical.Physical
 }
 
+func IsCollider(colliderA Collider, colliderB Collider) bool {
+	return (*colliderA.getPhysical()).IsCollide(colliderB.getPhysical())
+}
+
 type Mover interface {
 	CalcGameTick() // move, collision
 	MakeSendingData() *proto.Message
 	IsValid() bool
 }
 
+type Item interface {
+	DoEffet(p *Player)
+}
+
+type Wepone interface {
+	GiveItem(p *Player)
+}
+
 type NonMover interface {
 }
+
+////////////////////////////////////////////////////////////
 
 type ObjectSyncMap struct {
 	ObjectType reflect.Type
@@ -76,12 +90,4 @@ func (mlist *SyncMapList) GetHealPacks() *sync.Map {
 
 func (mlist *SyncMapList) GetMagicItems() *sync.Map {
 	return &mlist.objectLists[ObjectMagicItem].Map
-}
-
-type Item interface {
-	DoEffet(p *Player)
-}
-
-type Wepone interface {
-	GiveItem(p *Player)
 }

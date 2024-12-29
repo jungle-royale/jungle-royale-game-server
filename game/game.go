@@ -38,13 +38,12 @@ func NewGame(socket *network.Socket, minPlayerNum int) *Game {
 		calculator:   calculator.NewCalculator(gameState),
 		socket:       socket,
 	}
-
 	return game
 }
 
 func (game *Game) SetReadyStatus() *Game {
 	game.gameState = waiting
-	game.state.SetState(cons.WAITING_MAP_CHUNK_NUM)
+	game.state.ConfigureState(cons.WAITING_MAP_CHUNK_NUM)
 	return game
 }
 
@@ -52,11 +51,10 @@ func (game *Game) SetPlayingStatus() *Game {
 	game.gameState = playing
 
 	// map setting
-	game.state.SetState(game.playerNum)
+	game.state.ConfigureState(game.playerNum)
 
 	// player relocation
-	game.state.ObjectList.GetPlayers().Range(func(key, value any) bool {
-		player := value.(*object.Player)
+	game.state.Players.Range(func(key string, player *object.Player) bool {
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
 		player.SetLocation(x, y)
@@ -68,7 +66,7 @@ func (game *Game) SetPlayingStatus() *Game {
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
 		newHealPack := object.NewHealPack(x, y)
-		game.state.ObjectList.GetHealPacks().Store(newHealPack.Id, newHealPack)
+		game.state.HealPacks.Store(newHealPack.Id, newHealPack)
 	}
 
 	// magic item setting
@@ -77,8 +75,8 @@ func (game *Game) SetPlayingStatus() *Game {
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
 		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y)
 		newFireItem := object.NewMagicItem(object.FIRE_MAGIC, x, y)
-		game.state.ObjectList.GetMagicItems().Store(newStoneItem.ItemId, newStoneItem)
-		game.state.ObjectList.GetMagicItems().Store(newFireItem.ItemId, newFireItem)
+		game.state.MagicItems.Store(newStoneItem.ItemId, newStoneItem)
+		game.state.MagicItems.Store(newFireItem.ItemId, newFireItem)
 	}
 	return game
 }
@@ -171,30 +169,26 @@ func (game *Game) BroadcastLoop() {
 
 	for range ticker.C { // broadcast loop
 		playerList := make([]*message.PlayerState, 0)
-		game.state.ObjectList.GetPlayers().Range(func(key, value any) bool {
-			player := value.(*object.Player)
+		game.state.Players.Range(func(key string, player *object.Player) bool {
 			playerList = append(playerList, player.MakeSendingData())
 			return true
 		})
 
 		bulletList := make([]*message.BulletState, 0)
-		game.state.ObjectList.GetBullets().Range(func(key, value any) bool {
-			bullet := value.(*object.Bullet)
+		game.state.Bullets.Range(func(key string, bullet *object.Bullet) bool {
 			bulletList = append(bulletList, bullet.MakeSendingData())
 			return true
 		})
 
 		healPackList := make([]*message.HealPackState, 0)
-		game.state.ObjectList.GetHealPacks().Range(func(key, value any) bool {
-			healPack := value.(*object.HealPack)
+		game.state.HealPacks.Range(func(key string, healPack *object.HealPack) bool {
 			healPackList = append(healPackList, healPack.MakeSendingData())
 			return true
 		})
 
-		magieItemList := make([]*message.MagicItemState, 0)
-		game.state.ObjectList.GetMagicItems().Range(func(key, value any) bool {
-			magieItem := value.(*object.Magic)
-			magieItemList = append(magieItemList, magieItem.MakeSendingData())
+		magicItemList := make([]*message.MagicItemState, 0)
+		game.state.MagicItems.Range(func(key string, magicItem *object.Magic) bool {
+			magicItemList = append(magicItemList, magicItem.MakeSendingData())
 			return true
 		})
 

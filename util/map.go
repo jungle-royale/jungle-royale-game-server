@@ -1,4 +1,4 @@
-package datastructure
+package util
 
 import (
 	"sync"
@@ -91,4 +91,36 @@ func (m *Map[Key, Value]) Range(f func(Key, Value) bool) {
 			}
 		}
 	}
+}
+
+// KeyList: 모든 키를 슬라이스로 반환
+func (m *Map[Key, Value]) KeyList() []Key {
+	keys := []Key{}
+	if m.sync {
+		m.internal_sync_map.Range(func(key, _ any) bool {
+			keys = append(keys, key.(Key)) // 타입 단언 필요
+			return true
+		})
+	} else {
+		for k := range m.internal_map {
+			keys = append(keys, k)
+		}
+	}
+	return keys
+}
+
+// ValueList: 모든 값을 슬라이스로 반환
+func (m *Map[Key, Value]) ValueList() []Value {
+	values := []Value{}
+	if m.sync {
+		m.internal_sync_map.Range(func(_, value any) bool {
+			values = append(values, value.(Value)) // 타입 단언 필요
+			return true
+		})
+	} else {
+		for _, v := range m.internal_map {
+			values = append(values, v)
+		}
+	}
+	return values
 }

@@ -2,7 +2,6 @@ package game
 
 import (
 	"jungle-royale/message"
-	"jungle-royale/object"
 	"log"
 
 	"google.golang.org/protobuf/proto"
@@ -35,9 +34,8 @@ func (game *Game) HandleMessage(clientId string, data []byte) {
 }
 
 func (game *Game) handleDirChange(clientId string, msg *message.ChangeDir) {
-	if value, exists := game.state.ObjectList.GetPlayers().Load(clientId); exists {
-		player := value.(*object.Player)
-		go player.DirChange(float64(msg.GetAngle()), msg.IsMoved)
+	if player, exists := game.state.Players.Get(clientId); exists {
+		go (*player).DirChange(float64(msg.GetAngle()), msg.IsMoved)
 	}
 }
 
@@ -46,8 +44,7 @@ func (game *Game) handleBulletCreate(clientId string, msg *message.CreateBullet)
 }
 
 func (game *Game) handleDoDash(clientId string, msg *message.DoDash) {
-	if value, exists := game.state.ObjectList.GetPlayers().Load(clientId); exists {
-		player := value.(*object.Player)
-		go player.DoDash()
+	if player, exists := game.state.Players.Get(clientId); exists {
+		go (*player).DoDash()
 	}
 }

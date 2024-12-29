@@ -4,7 +4,6 @@ import (
 	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/object/physical"
-	"log"
 	"math"
 	"sync"
 	"time"
@@ -63,41 +62,6 @@ func (player *Player) CalcGameTick() {
 		player.dashCoolTime--
 	}
 	player.mu.Unlock()
-}
-
-func (player *Player) CalcCollision(objectMapList *SyncMapList) *Collider {
-	var ret Collider
-	flag := false
-	for _, c := range player.collisionList {
-		objectMapList.objectLists[c].Map.Range(func(key, value any) bool {
-			switch v := value.(type) {
-			case *HealPack:
-				if player.physicalObject.IsCollide((*v).getPhysical()) {
-					ret = v
-					flag = true
-					return false
-				} else {
-					return true
-				}
-			case *Magic:
-				if player.physicalObject.IsCollide((*v).getPhysical()) {
-					ret = v
-					flag = true
-					return false
-				} else {
-					return true
-				}
-			default:
-				return true
-			}
-		})
-	}
-
-	if flag {
-		return &ret
-	} else {
-		return nil
-	}
 }
 
 func (player *Player) IsValid() bool {
@@ -166,13 +130,11 @@ func (player *Player) GetMagic(magicType int) {
 
 func (player *Player) DoDash() {
 	if !player.isDashing && player.dashCoolTime < 0 {
-		log.Printf("dash")
 		player.mu.Lock()
 		player.isDashing = true
 		player.speed = DASH_SPEED
 		player.mu.Unlock()
 		time.AfterFunc(cons.CalcLoopInterval*DASH_TICK*time.Millisecond, func() {
-			log.Printf("dash end")
 			player.mu.Lock()
 			player.isDashing = false
 			player.speed = PLAYER_SPEED

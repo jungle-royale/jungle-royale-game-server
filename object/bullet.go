@@ -61,33 +61,6 @@ func NewBullet(
 	}
 }
 
-func (bullet *Bullet) CalcCollision(objectMapList *SyncMapList) *Collider {
-	var ret Collider
-	flag := false
-	for _, c := range bullet.collisionList {
-		objectMapList.objectLists[c].Map.Range(func(key, value any) bool {
-			switch v := value.(type) {
-			case *Player:
-				if bullet.physicalObject.IsCollide((*v).getPhysical()) {
-					ret = v
-					flag = true
-					return false
-				} else {
-					return true
-				}
-			default:
-				return true
-			}
-		})
-	}
-
-	if flag {
-		return &ret
-	} else {
-		return nil
-	}
-}
-
 func (bullet *Bullet) CalcGameTick() {
 	bullet.mu.Lock()
 	bullet.physicalObject.Move(bullet.dx, bullet.dy)
