@@ -48,7 +48,6 @@ func NewBullet(
 }
 
 func (bullet *Bullet) CalcCollision(objectMapList *SyncMapList) *Collider {
-
 	var ret Collider
 	flag := false
 	for _, c := range bullet.collisionList {

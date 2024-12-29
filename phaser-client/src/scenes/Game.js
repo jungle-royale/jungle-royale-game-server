@@ -75,6 +75,29 @@ class Bullet {
         }
     }
 }
+class HealPack {
+    constructor(ItemId, x, y, scene) {
+        this.ItemId = ItemId
+        this.x = x;
+        this.y = y;
+        this.scene = scene
+        this.rectangle = null;
+        this.createRectangle();
+    }
+
+    createRectangle() {
+        this.rectangle = this.scene.add.graphics();
+        this.rectangle.fillStyle(0xFF0000, 1);
+        this.rectangle.fillRect(this.x, this.y, 0.5, 0.3);
+    }
+
+    destroy() {
+        if(this.rectangle) {
+            this.rectangle.destroy();
+            this.rectangle = null;
+        }
+    }
+}
 
 function sendDashMessage(socket) {
     const dash = new message.DoDash();
@@ -142,9 +165,11 @@ export class Game extends Scene {
         this.socket = null; // WebSocket 연결
         this.players = {}; // 플레이어 데이터 저장
         this.bullets = {};
+        this.healPacks = {};
         this.last_x = 0;
         this.last_y = 0;
         this.dash = false;
+        this.healthText = null;
     }
 
     create() {
@@ -244,6 +269,15 @@ export class Game extends Scene {
             left: Phaser.Input.Keyboard.KeyCodes.A,
             right: Phaser.Input.Keyboard.KeyCodes.D
         });
+
+        this.healthText = this.add.text(10, 10, `health: ${100}`, {
+            font: '20px Arial',
+            fill: '#000000',
+            backgroundColor: "#000000"
+        })
+
+        this.healthText.setScrollFactor(0);
+        this.healthText.setPosition(10, 10);
     }
 
     update() {
@@ -340,7 +374,13 @@ export class Game extends Scene {
                     this.players[player.id].updatePosition(player.x, player.y);
                 }
                 if (player.id == this.ID) {
+                    // console.log(player);
+                    this.healthText.setText(`health: ${player.health}`)
                     this.cameras.main.centerOn(player.x, player.y);
+                    this.healthText.setScrollFactor(0);
+                    this.healthText.setPosition(10, 10);
+                    // console.log(`score position (${this.healthText.x}, ${this.healthText.y}), ${this.healthText.width}, ${this.healthText.height}`);
+                    console.log("health: ", player.health);
                 }
             });
     
@@ -376,6 +416,28 @@ export class Game extends Scene {
                 if (!bulletIdsInState.has(bulletId)) {
                     this.bullets[bulletId].circle.clear(); // 해당 bullet의 리소스 정리
                     delete this.bullets[bulletId]; // this.bullets에서 제거
+                }
+            }
+        }
+
+        if(state.healpackstateList) {
+            // console.log(state.healpackstateList);
+            // console.log(this.healPacks)
+            const healpackstateList = new Set(); // state.bulletstateList에서 확인된 bulletid를 저장할 Set
+            state.healpackstateList.forEach((healPack) => {
+                healpackstateList.add(healPack.itemid); // state에 있는 bulletid 저장
+                if (!(healPack.itemid in this.healPacks)) {
+                    this.healPacks[healPack.itemid] = new HealPack(healPack.itemid, healPack.x, healPack.y, this);
+                }
+                // if (this.healPacks[healPack.ItemId]) {
+                //     this.healPacks[healPack.ItemId].updatePosition(healPack.x, healPack.y);
+                // }
+            });
+
+            for (const ItemId in this.healPacks) {
+                if (!healpackstateList.has(ItemId)) {
+                    this.healPacks[ItemId].rectangle.clear(); // 해당 bullet의 리소스 정리
+                    delete this.healPacks[ItemId]; // this.bullets에서 제거
                 }
             }
         }

@@ -25,6 +25,13 @@ func (calculator *Calculator) CalcGameTickState() {
 			return true
 		}
 		player.CalcGameTick()
+		if collider := player.CalcCollision(calculator.state.ObjectList); collider != nil {
+			calculator.state.ObjectList.GetBullets().Delete(playerId)
+			if healPack, ok := (*collider).(*object.HealPack); ok {
+				player.GetHealPack()
+				calculator.state.ObjectList.GetHealPack().Delete(healPack.Id)
+			}
+		}
 		return true
 	})
 

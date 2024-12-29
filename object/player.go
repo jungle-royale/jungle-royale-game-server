@@ -13,7 +13,7 @@ import (
 const PLAYER_SPEED = 0.3
 const DASH_SPEED = 1.2
 const DASH_TICK = 5
-const DASH_COOLTIME = 90 // 1.5sec
+const DASH_COOLTIME = 60 // 1sec
 const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
 
@@ -26,6 +26,7 @@ type Player struct {
 	isDashing      bool
 	dashCoolTime   int
 	health         int
+	collisionList  []int
 	physicalObject physical.Physical
 }
 
@@ -40,6 +41,7 @@ func NewPlayer(id string, x float32, y float32) *Player {
 		false,
 		0,
 		100,
+		[]int{ObjectHealPack},
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
 	}
 }
@@ -61,8 +63,31 @@ func (player *Player) CalcGameTick() {
 	player.mu.Unlock()
 }
 
-func (player *Player) CalcCollision() {
+func (player *Player) CalcCollision(objectMapList *SyncMapList) *Collider {
+	var ret Collider
+	flag := false
+	for _, c := range player.collisionList {
+		objectMapList.objectLists[c].Map.Range(func(key, value any) bool {
+			switch v := value.(type) {
+			case *HealPack:
+				if player.physicalObject.IsCollide((*v).getPhysical()) {
+					ret = v
+					flag = true
+					return false
+				} else {
+					return true
+				}
+			default:
+				return true
+			}
+		})
+	}
 
+	if flag {
+		return &ret
+	} else {
+		return nil
+	}
 }
 
 func (player *Player) IsValid() bool {
@@ -78,15 +103,25 @@ func (player *Player) DirChange(angle float64, isMoved bool) {
 
 func (player *Player) MakeSendingData() *message.PlayerState {
 	return &message.PlayerState{
-		Id: player.id,
-		X:  player.physicalObject.GetX(),
-		Y:  player.physicalObject.GetY(),
+		Id:     player.id,
+		X:      player.physicalObject.GetX(),
+		Y:      player.physicalObject.GetY(),
+		Health: int32(player.health),
 	}
 }
 
 func (player *Player) HeatedBullet() {
 	player.mu.Lock()
 	player.health -= BULLET_DAMAGE
+	player.mu.Unlock()
+}
+
+func (player *Player) GetHealPack() {
+	player.mu.Lock()
+	player.health += HEAL_AMOUNT
+	if player.health >= 100 {
+		player.health = 100
+	}
 	player.mu.Unlock()
 }
 

@@ -12,8 +12,12 @@ import (
 const OBJECT_NUM = 2
 const MOVER_OBJECT_NUM = 2
 const (
+	// mover object
 	ObjectPlayer = iota
-	ObjectBullet // mover object first
+	ObjectBullet
+
+	// nonmover object
+	ObjectHealPack
 )
 
 type Collider interface {
@@ -51,6 +55,7 @@ func NewMoverSyncMapList() *SyncMapList {
 	list := make(map[int]*ObjectSyncMap)
 	list[ObjectPlayer] = NewObjectSyncMap(reflect.TypeOf(Player{}))
 	list[ObjectBullet] = NewObjectSyncMap(reflect.TypeOf(Bullet{}))
+	list[ObjectHealPack] = NewObjectSyncMap((reflect.TypeOf(HealPack{})))
 
 	return &SyncMapList{list}
 }
@@ -61,4 +66,16 @@ func (mlist *SyncMapList) GetPlayers() *sync.Map {
 
 func (mlist *SyncMapList) GetBullets() *sync.Map {
 	return &mlist.objectLists[ObjectBullet].Map
+}
+
+func (mlist *SyncMapList) GetHealPack() *sync.Map {
+	return &mlist.objectLists[ObjectHealPack].Map
+}
+
+type Item interface {
+	DoEffet(p *Player)
+}
+
+type Wepone interface {
+	GiveItem(p *Player)
 }

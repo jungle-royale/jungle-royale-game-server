@@ -50,7 +50,11 @@ func (game *Game) SetReadyStatus() *Game {
 
 func (game *Game) SetPlayingStatus() *Game {
 	game.gameState = playing
-	game.state.SetState(game.playerNum * game.playerNum)
+
+	// map setting
+	game.state.SetState(game.playerNum)
+
+	// player relocation
 	game.state.ObjectList.GetPlayers().Range(func(key, value any) bool {
 		player := value.(*object.Player)
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
@@ -58,6 +62,14 @@ func (game *Game) SetPlayingStatus() *Game {
 		player.SetLocation(x, y)
 		return true
 	})
+
+	// healpack setting
+	for i := 0; i < game.playerNum*game.playerNum; i++ {
+		x := float32(rand.Intn(int(game.state.MaxCoord)))
+		y := float32(rand.Intn(int(game.state.MaxCoord)))
+		newHealPack := object.NewHealPack(x, y)
+		game.state.ObjectList.GetHealPack().Store(newHealPack.Id, newHealPack)
+	}
 	return game
 }
 
@@ -162,9 +174,17 @@ func (game *Game) BroadcastLoop() {
 			return true
 		})
 
+		healPackList := make([]*message.HealPackState, 0)
+		game.state.ObjectList.GetHealPack().Range(func(key, value any) bool {
+			healPack := value.(*object.HealPack)
+			healPackList = append(healPackList, healPack.MakeSendingData())
+			return true
+		})
+
 		gameState := &message.GameState{
-			PlayerState: playerList,
-			BulletState: bulletList,
+			PlayerState:   playerList,
+			BulletState:   bulletList,
+			HealPackState: healPackList,
 		}
 
 		data, err := proto.Marshal(&message.Wrapper{
