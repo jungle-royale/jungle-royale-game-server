@@ -28,7 +28,7 @@ const (
 type PlayerDead struct {
 	Killer      string
 	dead        string
-	dyingStatus int
+	DyingStatus int
 }
 
 func NewPlayerDead(killer string, dead string, ds int) *PlayerDead {
@@ -43,7 +43,7 @@ func (pd *PlayerDead) MakeSendingData() *message.PlayerDeadState {
 	return &message.PlayerDeadState{
 		Killer:      pd.Killer,
 		Dead:        pd.dead,
-		DyingStatus: int32(pd.dyingStatus),
+		DyingStatus: int32(pd.DyingStatus),
 	}
 }
 
@@ -122,19 +122,19 @@ func (player *Player) HeatedBullet(bullet *Bullet) {
 	if bullet.BulletType == BULLET_NONE {
 		player.mu.Lock()
 		player.health -= BULLET_DAMAGE
-		player.DyingStatus.dyingStatus = DYING_SNOW
+		player.DyingStatus.DyingStatus = DYING_SNOW
 		player.DyingStatus.Killer = bullet.playerId
 		player.mu.Unlock()
 	} else if bullet.BulletType == BULLET_STONE {
 		player.mu.Lock()
 		player.health -= BULLET_STONE_DAMAGE
-		player.DyingStatus.dyingStatus = DYING_STONE
+		player.DyingStatus.DyingStatus = DYING_STONE
 		player.DyingStatus.Killer = bullet.playerId
 		player.mu.Unlock()
 	} else if bullet.BulletType == BULLET_FIRE {
 		player.mu.Lock()
 		player.health -= BULLET_DAMAGE
-		player.DyingStatus.dyingStatus = DYING_FIRE
+		player.DyingStatus.DyingStatus = DYING_FIRE
 		player.DyingStatus.Killer = bullet.playerId
 		player.mu.Unlock()
 		ticker := time.NewTicker(1 * time.Second)
@@ -146,7 +146,7 @@ func (player *Player) HeatedBullet(bullet *Bullet) {
 			}
 			player.mu.Lock()
 			player.health -= BULLET_FIRE_SEC_DAMAGE
-			player.DyingStatus.dyingStatus = DYING_FIRE
+			player.DyingStatus.DyingStatus = DYING_FIRE
 			player.DyingStatus.Killer = bullet.playerId
 			player.mu.Unlock()
 			count--

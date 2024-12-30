@@ -42,3 +42,4 @@ node_modules
 
 # test log
 log.txt
+message_pb.js

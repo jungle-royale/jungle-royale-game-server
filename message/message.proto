@@ -34,6 +34,7 @@ message GameState {
     repeated HealPackState healPackState = 3;
     repeated MagicItemState magicItemState = 4;
     repeated PlayerDeadState playerDeadState = 5;
+    repeated FallenReadyTileState fallenReadyTileState = 6;
 }
 
 message PlayerState {
@@ -88,4 +89,9 @@ message PlayerDeadState {
     // 2: stone
     // 3: fire
     // 4: fall
+}
+
+message FallenReadyTileState {
+    float x = 1;
+    float y = 2;
 }

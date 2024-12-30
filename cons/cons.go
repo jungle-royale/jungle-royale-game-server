@@ -16,5 +16,6 @@ const BULLET_PER_PLAYER = 4
 const CHUNK_LENGTH = 20
 
 // State
+const TILE_FALL_ALERT_TIME = 5
 
 // Object
