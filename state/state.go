@@ -11,6 +11,7 @@ import (
 
 type State struct {
 	Players    *util.Map[string, *object.Player]
+	PlayerDead *util.Map[string, *object.PlayerDead]
 	Bullets    *util.Map[string, *object.Bullet]
 	HealPacks  *util.Map[string, *object.HealPack]
 	MagicItems *util.Map[string, *object.Magic]
@@ -20,6 +21,7 @@ type State struct {
 func NewState() *State {
 	return &State{
 		Players:    util.NewSyncMap[string, *object.Player](),
+		PlayerDead: util.NewSyncMap[string, *object.PlayerDead](),
 		Bullets:    util.NewSyncMap[string, *object.Bullet](),
 		HealPacks:  util.NewSyncMap[string, *object.HealPack](),
 		MagicItems: util.NewSyncMap[string, *object.Magic](),
@@ -43,8 +45,8 @@ func (state *State) AddBullet(x float32, y float32, clientId string, BulletCreat
 	bulletId := uuid.New().String()
 	if player, exists := state.Players.Get(clientId); exists {
 		newBullet := object.NewBullet(
+			uuid.New().String(),
 			clientId,
-			BulletCreateMessage.PlayerId,
 			(*player).MagicType,
 			x,
 			y,

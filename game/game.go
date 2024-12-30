@@ -48,14 +48,14 @@ func (game *Game) SetReadyStatus() *Game {
 	return game
 }
 
-func (game *Game) SetPlayingStatus() *Game {
+func (game *Game) SetPlayingStatus(length int) *Game {
 	game.gameState = playing
 
 	// map setting
-	// game.state.ConfigureState(game.playerNum)
-	// game.calculator.ConfigureCalculator(game.playerNum)
-	game.state.ConfigureState(4)
-	game.calculator.ConfigureCalculator(4)
+	game.state.ConfigureState(length)
+	game.calculator.ConfigureCalculator(length)
+	// game.state.ConfigureState(4)
+	// game.calculator.ConfigureCalculator(4)
 
 	// player relocation
 	game.state.Players.Range(func(key string, player *object.Player) bool {
@@ -108,7 +108,9 @@ func (game *Game) SetPlayer(clientId string) {
 	game.state.AddPlayer(clientId, float32(x), float32(y))
 
 	// send GameInit message
-	gameInit := &message.GameInit{Id: clientId}
+	gameInit := &message.GameInit{
+		Id: clientId,
+	}
 	data, err := proto.Marshal(&message.Wrapper{
 		MessageType: &message.Wrapper_GameInit{
 			GameInit: gameInit,
@@ -145,7 +147,7 @@ func (game *Game) CalcSecLoop() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	gameStartCount := 3
+	gameStartCount := 10
 	for range ticker.C {
 		if game.gameState != playing &&
 			game.playerNum >= game.minPlayerNum &&
@@ -165,8 +167,23 @@ func (game *Game) CalcSecLoop() {
 			log.Printf("game play in %d", gameStartCount)
 			(*game.socket).Broadcast(data)
 			gameStartCount--
-			if gameStartCount == -1 {
-				game.SetPlayingStatus()
+			if gameStartCount == 0 {
+				mapLength := game.playerNum / 2
+				start := &message.GameStart{
+					MapLength: int32(mapLength),
+				}
+				gameStart, err := proto.Marshal(&message.Wrapper{
+					MessageType: &message.Wrapper_GameStart{
+						GameStart: start,
+					},
+				})
+				if err != nil {
+					log.Printf("Failed to marshal GameState: %v", err)
+					return
+				}
+				(*game.socket).Broadcast(gameStart)
+
+				game.SetPlayingStatus(mapLength)
 				log.Println("game start")
 			}
 		}
@@ -203,10 +220,18 @@ func (game *Game) BroadcastLoop() {
 			return true
 		})
 
+		playerDeadList := make([]*message.PlayerDeadState, 0)
+		game.state.PlayerDead.Range(func(key string, status *object.PlayerDead) bool {
+			playerDeadList = append(playerDeadList, status.MakeSendingData())
+			game.state.PlayerDead.Delete(key)
+			return true
+		})
+
 		gameState := &message.GameState{
-			PlayerState:   playerList,
-			BulletState:   bulletList,
-			HealPackState: healPackList,
+			PlayerState:    playerList,
+			BulletState:    bulletList,
+			HealPackState:  healPackList,
+			MagicItemState: magicItemList,
 		}
 
 		data, err := proto.Marshal(&message.Wrapper{

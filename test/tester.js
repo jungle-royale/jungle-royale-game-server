@@ -26,9 +26,6 @@ module.exports = {
         break;
       case 2: // CreateBullet
         const bulletCreate = new message.CreateBullet();
-        bulletCreate.setPlayerid("asdf");
-        bulletCreate.setStartx(Math.random() * 100);
-        bulletCreate.setStarty(Math.random() * 100);
         bulletCreate.setAngle(Math.random() * 360);
 
         // Wrapper 메시지 생성

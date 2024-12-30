@@ -44,6 +44,7 @@ func (calculator *Calculator) CalcGameTickState() {
 	calculator.state.Players.Range(func(playerId string, player *object.Player) bool {
 		if !player.IsValid() {
 			calculator.state.Players.Delete(playerId)
+			calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
 			return true
 		}
 		player.CalcGameTick()
@@ -73,7 +74,7 @@ func (calculator *Calculator) CalcGameTickState() {
 		calculator.state.Players.Range(func(key string, player *object.Player) bool {
 			if calculator.IsCollider(bullet, player) {
 				calculator.state.Bullets.Delete(bulletId)
-				player.HeatedBullet(bullet.BulletType)
+				player.HeatedBullet(bullet)
 			}
 			return true
 		})

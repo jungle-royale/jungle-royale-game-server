@@ -31,6 +31,7 @@ message GameState {
     repeated BulletState bulletState = 2;
     repeated HealPackState healPackState = 3;
     repeated MagicItemState magicItemState = 4;
+    repeated PlayerDeadState playerDeadState = 5;
 }
 
 message PlayerState {
@@ -42,10 +43,7 @@ message PlayerState {
 }
 
 message CreateBullet {
-    string playerId = 1;
-    float startX = 2;
-    float startY = 3;
-    float angle = 4;
+    float angle = 1;
 }
 
 message BulletState {
@@ -64,7 +62,7 @@ message DoDash {
 }
 
 message GameStart {
-    bool start = 1;
+    int32 mapLength = 1;
 }
 
 message HealPackState {
@@ -78,4 +76,14 @@ message MagicItemState {
     int32 magicType = 2;
     float x = 3;
     float y = 4;
+}
+
+message PlayerDeadState {
+    string killer = 1;
+    string dead = 2;
+    int32 dyingStatus = 3;
+    // 1: snow
+    // 2: stone
+    // 3: fire
+    // 4: fall
 }
