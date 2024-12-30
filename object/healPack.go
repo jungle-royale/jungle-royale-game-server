@@ -30,7 +30,7 @@ func (heal *HealPack) DoEffet(player *Player) {
 	player.GetHealPack()
 }
 
-func (heal *HealPack) getPhysical() *physical.Physical {
+func (heal *HealPack) GetPhysical() *physical.Physical {
 	return &heal.physicalObject
 }
 

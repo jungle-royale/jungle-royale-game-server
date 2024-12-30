@@ -1,7 +1,6 @@
 package object
 
 import (
-	"jungle-royale/object/physical"
 	"reflect"
 	"sync"
 
@@ -21,26 +20,14 @@ const (
 	ObjectMagicItem
 )
 
-type Collider interface {
-	getPhysical() *physical.Physical
-}
-
-func IsCollider(colliderA Collider, colliderB Collider) bool {
-	return (*colliderA.getPhysical()).IsCollide(colliderB.getPhysical())
+type Object interface {
 }
 
 type Mover interface {
 	CalcGameTick() // move, collision
 	MakeSendingData() *proto.Message
 	IsValid() bool
-}
-
-type Item interface {
-	DoEffet(p *Player)
-}
-
-type Wepone interface {
-	GiveItem(p *Player)
+	addCollider(objectType int, effect func(obj Object))
 }
 
 type NonMover interface {

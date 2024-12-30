@@ -1,19 +1,42 @@
 package calculator
 
 import (
+	"jungle-royale/chunk"
 	"jungle-royale/object"
+	"jungle-royale/object/physical"
 	"jungle-royale/state"
 )
 
 type Calculator struct {
-	state *state.State
+	chunkNum  int
+	chunkList [][]*chunk.Chunk
+	state     *state.State
+}
+
+type Collider interface {
+	GetPhysical() *physical.Physical
 }
 
 func NewCalculator(state *state.State) *Calculator {
-	return &Calculator{state}
+	return &Calculator{
+		state: state,
+	}
 }
 
-// TODO: Collision 이라는 객체 추가 -> 충돌 판정 계산하는 객체 -> coll
+func (calculator *Calculator) ConfigureCalculator(chunkNum int) {
+	calculator.chunkNum = chunkNum
+	calculator.chunkList = make([][]*chunk.Chunk, chunkNum)
+	for i := 0; i < chunkNum; i++ {
+		calculator.chunkList[i] = make([]*chunk.Chunk, chunkNum)
+		for j := 0; j < chunkNum; j++ {
+			calculator.chunkList[i][j] = chunk.NewChunk()
+		}
+	}
+}
+
+func (calculator *Calculator) IsCollider(colliderA Collider, colliderB Collider) bool {
+	return (*colliderA.GetPhysical()).IsCollide(colliderB.GetPhysical())
+}
 
 func (calculator *Calculator) CalcGameTickState() {
 
@@ -21,22 +44,22 @@ func (calculator *Calculator) CalcGameTickState() {
 	calculator.state.Players.Range(func(playerId string, player *object.Player) bool {
 		if !player.IsValid() {
 			calculator.state.Players.Delete(playerId)
+			calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
 			return true
 		}
 		player.CalcGameTick()
 
 		calculator.state.HealPacks.Range(func(key string, healPack *object.HealPack) bool {
-			if object.IsCollider(player, healPack) {
-				calculator.state.Bullets.Delete(playerId)
+			if calculator.IsCollider(player, healPack) {
+				calculator.state.HealPacks.Delete(healPack.Id)
 			}
 			player.GetHealPack()
-			calculator.state.HealPacks.Delete(healPack.Id)
 			return true
 		})
 
 		calculator.state.MagicItems.Range(func(key string, magicItem *object.Magic) bool {
-			if object.IsCollider(player, magicItem) {
-				calculator.state.Bullets.Delete(playerId) // collide 되면 bullet을 왜 삭제 하는지?
+			if calculator.IsCollider(player, magicItem) {
+				calculator.state.MagicItems.Delete(magicItem.ItemId)
 			}
 			return true
 		})
@@ -49,9 +72,9 @@ func (calculator *Calculator) CalcGameTickState() {
 		bullet.CalcGameTick()
 
 		calculator.state.Players.Range(func(key string, player *object.Player) bool {
-			if object.IsCollider(bullet, player) {
+			if calculator.IsCollider(bullet, player) {
 				calculator.state.Bullets.Delete(bulletId)
-				player.HeatedBullet(bullet.BulletType)
+				player.HeatedBullet(bullet)
 			}
 			return true
 		})

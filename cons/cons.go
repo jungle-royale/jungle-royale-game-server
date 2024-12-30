@@ -9,7 +9,7 @@ const (
 )
 
 const MAX_PLAYER_NUM = 100
-const WAITING_MAP_CHUNK_NUM = 2
+const WAITING_MAP_CHUNK_NUM = 3
 const BULLET_PER_PLAYER = 4
 
 // Chunk

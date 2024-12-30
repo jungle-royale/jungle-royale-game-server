@@ -10,6 +10,7 @@ import (
 type ClientId string
 
 type Client struct {
+	mu     sync.Mutex
 	ID     ClientId
 	RoomID RoomId
 	conn   *websocket.Conn
@@ -19,6 +20,7 @@ type Client struct {
 func NewClient(roomId RoomId, conn *websocket.Conn) *Client {
 	id := uuid.New().String()
 	return &Client{
+		sync.Mutex{},
 		ClientId(id),
 		roomId,
 		conn,

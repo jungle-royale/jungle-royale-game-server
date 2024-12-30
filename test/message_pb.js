@@ -2350,7 +2350,7 @@ proto.message.GameStart.prototype.toObject = function(opt_includeInstance) {
  */
 proto.message.GameStart.toObject = function(includeInstance, msg) {
   var f, obj = {
-maplength: jspb.Message.getFieldWithDefault(msg, 1, 0)
+start: jspb.Message.getBooleanFieldWithDefault(msg, 1, false)
   };
 
   if (includeInstance) {
@@ -2388,8 +2388,8 @@ proto.message.GameStart.deserializeBinaryFromReader = function(msg, reader) {
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = /** @type {number} */ (reader.readInt32());
-      msg.setMaplength(value);
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setStart(value);
       break;
     default:
       reader.skipField();
@@ -2420,9 +2420,9 @@ proto.message.GameStart.prototype.serializeBinary = function() {
  */
 proto.message.GameStart.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getMaplength();
-  if (f !== 0) {
-    writer.writeInt32(
+  f = message.getStart();
+  if (f) {
+    writer.writeBool(
       1,
       f
     );
@@ -2431,20 +2431,20 @@ proto.message.GameStart.serializeBinaryToWriter = function(message, writer) {
 
 
 /**
- * optional int32 mapLength = 1;
- * @return {number}
+ * optional bool start = 1;
+ * @return {boolean}
  */
-proto.message.GameStart.prototype.getMaplength = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 1, 0));
+proto.message.GameStart.prototype.getStart = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 1, false));
 };
 
 
 /**
- * @param {number} value
+ * @param {boolean} value
  * @return {!proto.message.GameStart} returns this
  */
-proto.message.GameStart.prototype.setMaplength = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
+proto.message.GameStart.prototype.setStart = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 1, value);
 };
 
 

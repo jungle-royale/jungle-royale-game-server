@@ -133,7 +133,7 @@ function sendChangeMessage(socket, angle, isMoved) {
     socket.send(binaryData);
 }
 
-function sendBulletCreateMessage(socket, playerId, x, y, angle) {
+function sendBulletCreateMessage(socket, angle) {
 
     if (socket.readyState !== WebSocket.OPEN) {
         console.error('WebSocket is not open.');
@@ -141,9 +141,6 @@ function sendBulletCreateMessage(socket, playerId, x, y, angle) {
     }
 
     const bulletCreate = new message.CreateBullet();
-    bulletCreate.setPlayerid(playerId);
-    bulletCreate.setStartx(x);
-    bulletCreate.setStarty(y);
     bulletCreate.setAngle(angle);
 
     // Wrapper 메시지 생성
@@ -253,9 +250,6 @@ export class Game extends Scene {
             const degrees = radians * (180 / Math.PI) + 90;
             sendBulletCreateMessage(
                 this.socket,
-                this.ID,
-                worldPoint.x,
-                worldPoint.y,
                 degrees,
             );
         });

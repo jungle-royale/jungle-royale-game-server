@@ -16,6 +16,37 @@ const DASH_COOLTIME = 60 // 1sec
 const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
 
+// dying status
+const (
+	DYING_NONE = iota
+	DYING_SNOW
+	DYING_STONE
+	DYING_FIRE
+	DYING_FALL
+)
+
+type PlayerDead struct {
+	Killer      string
+	dead        string
+	dyingStatus int
+}
+
+func NewPlayerDead(killer string, dead string, ds int) *PlayerDead {
+	return &PlayerDead{
+		killer,
+		dead,
+		ds,
+	}
+}
+
+func (pd *PlayerDead) MakeSendingData() *message.PlayerDeadState {
+	return &message.PlayerDeadState{
+		Killer:      pd.Killer,
+		Dead:        pd.dead,
+		DyingStatus: int32(pd.dyingStatus),
+	}
+}
+
 type Player struct {
 	mu             sync.Mutex
 	id             string
@@ -26,6 +57,7 @@ type Player struct {
 	dashCoolTime   int
 	health         int
 	MagicType      int
+	DyingStatus    *PlayerDead
 	collisionList  []int
 	physicalObject physical.Physical
 }
@@ -41,7 +73,8 @@ func NewPlayer(id string, x float32, y float32) *Player {
 		false,
 		0,
 		100,
-		NONE_MAGIC,
+		BULLET_NONE,
+		NewPlayerDead("", id, DYING_NONE),
 		[]int{ObjectHealPack, ObjectMagicItem},
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
 	}
@@ -85,18 +118,24 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 	}
 }
 
-func (player *Player) HeatedBullet(bulletType int) {
-	if bulletType == BULLET_NONE {
+func (player *Player) HeatedBullet(bullet *Bullet) {
+	if bullet.BulletType == BULLET_NONE {
 		player.mu.Lock()
 		player.health -= BULLET_DAMAGE
+		player.DyingStatus.dyingStatus = DYING_SNOW
+		player.DyingStatus.Killer = bullet.playerId
 		player.mu.Unlock()
-	} else if bulletType == BULLET_STONE {
+	} else if bullet.BulletType == BULLET_STONE {
 		player.mu.Lock()
 		player.health -= BULLET_STONE_DAMAGE
+		player.DyingStatus.dyingStatus = DYING_STONE
+		player.DyingStatus.Killer = bullet.playerId
 		player.mu.Unlock()
-	} else if bulletType == BULLET_FIRE {
+	} else if bullet.BulletType == BULLET_FIRE {
 		player.mu.Lock()
 		player.health -= BULLET_DAMAGE
+		player.DyingStatus.dyingStatus = DYING_FIRE
+		player.DyingStatus.Killer = bullet.playerId
 		player.mu.Unlock()
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
@@ -107,6 +146,8 @@ func (player *Player) HeatedBullet(bulletType int) {
 			}
 			player.mu.Lock()
 			player.health -= BULLET_FIRE_SEC_DAMAGE
+			player.DyingStatus.dyingStatus = DYING_FIRE
+			player.DyingStatus.Killer = bullet.playerId
 			player.mu.Unlock()
 			count--
 		}
@@ -144,6 +185,10 @@ func (player *Player) DoDash() {
 	}
 }
 
-func (player *Player) getPhysical() *physical.Physical {
+func (player *Player) GetPhysical() *physical.Physical {
 	return &player.physicalObject
+}
+
+func (player *Player) addCollider(objectType int, effect func(obj Object)) {
+
 }

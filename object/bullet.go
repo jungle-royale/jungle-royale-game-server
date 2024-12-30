@@ -83,6 +83,10 @@ func (bullet *Bullet) MakeSendingData() *message.BulletState {
 	}
 }
 
-func (bullet *Bullet) getPhysical() *physical.Physical {
+func (bullet *Bullet) GetPhysical() *physical.Physical {
 	return &bullet.physicalObject
+}
+
+func (bullet *Bullet) addCollider(objectType int, effect func(obj Object)) {
+
 }
