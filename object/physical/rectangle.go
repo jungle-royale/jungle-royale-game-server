@@ -2,6 +2,7 @@ package physical
 
 import (
 	"log"
+	"math"
 )
 
 type Rectangle struct {
@@ -34,10 +35,14 @@ func (obj *Rectangle) IsCollide(opponent *Physical) bool { // opponent is pointe
 	switch opp := (*opponent).(type) {
 
 	case *Circle:
-		if opp.pointInCircle(obj.X, obj.Y) ||
-			opp.pointInCircle(obj.X+obj.Width, obj.Y) ||
-			opp.pointInCircle(obj.X, obj.Y+obj.Length) ||
-			opp.pointInCircle(obj.X+obj.Width, obj.Y+obj.Length) {
+
+		closestX := math.Max(float64(obj.X), math.Min(float64(opp.X), float64(obj.X+obj.Width)))
+		closestY := math.Max(float64(obj.Y), math.Min(float64(opp.Y), float64(obj.Y+obj.Length)))
+		distanceX := float64(opp.X) - closestX
+		distanceY := float64(opp.Y) - closestY
+		distanceSquared := distanceX*distanceX + distanceY*distanceY
+
+		if distanceSquared <= float64(opp.Radius*opp.Radius) {
 			return true
 		} else {
 			return false

@@ -1,68 +1,47 @@
-const protobuf = require("protobufjs");
 const faker = require("faker"); // 랜덤 값 생성용 (선택적으로 사용)
-let root = null;
-
-// Protobuf 정의 파일 로드
-protobuf.load("message.proto", (err, loadedRoot) => {
-  if (err) throw err;
-  root = loadedRoot;
-});
+// import * as message from 'message_pb';
+const message = require("./message_pb")
 
 module.exports = {
-  randomMessage: (context, events, done) => {
-    if (!root) {
-      console.error("Protobuf not loaded yet");
-      return done();
-    }
 
-    // 메시지 타입 정의
-    const Wrapper = root.lookupType("Wrapper");
-    const ChangeDir = root.lookupType("ChangeDir");
-    const DoDash = root.lookupType("DoDash");
-    const CreateBullet = root.lookupType("CreateBullet");
+  randomMessage: (context, events, done) => {
 
     // 랜덤 메시지 생성
     const messageType = Math.floor(Math.random() * 3);
-    let message;
+    const wrapper = new message.Wrapper();
     switch (messageType) {
       case 0: // ChangeDir
-        message = Wrapper.create({
-          MessageType: {
-            changeDir: ChangeDir.create({
-              angle: Math.random() * 360,
-              isMoved: Math.random() > 0.5,
-            }),
-          },
-        });
+        const change = new message.ChangeDir();
+        change.setAngle(Math.random() * 360);
+        change.setIsmoved((Math.random() > 0.5));
+
+        // Wrapper 메시지 생성
+        
+        wrapper.setChangedir(change);
         break;
       case 1: // DoDash
-        message = Wrapper.create({
-          MessageType: {
-            doDash: DoDash.create({
-              dash: Math.random() > 0.5,
-            }),
-          },
-        });
+        const dash = new message.DoDash();
+        dash.setDash((Math.random() > 0.5));
+        wrapper.setDodash(dash);
         break;
       case 2: // CreateBullet
-        message = Wrapper.create({
-          MessageType: {
-            createBullet: CreateBullet.create({
-              playerId: faker.datatype.uuid(), // 랜덤 Player ID
-              startX: Math.random() * 1000,   // 랜덤 X 좌표
-              startY: Math.random() * 1000,   // 랜덤 Y 좌표
-              angle: Math.random() * 360,     // 랜덤 각도
-            }),
-          },
-        });
+        const bulletCreate = new message.CreateBullet();
+        bulletCreate.setPlayerid("asdf");
+        bulletCreate.setStartx(Math.random() * 100);
+        bulletCreate.setStarty(Math.random() * 100);
+        bulletCreate.setAngle(Math.random() * 360);
+
+        // Wrapper 메시지 생성
+        
+        wrapper.setCreatebullet(bulletCreate);
         break;
     }
 
     // Protobuf 메시지 직렬화
-    const buffer = Wrapper.encode(message).finish();
+    const binaryData = wrapper.serializeBinary();
 
     // WebSocket으로 전송
-    context.ws.send(buffer);
+    context.ws.send(binaryData);
 
     // console.log("Sent Protobuf message:", message);
     done();

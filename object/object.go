@@ -20,18 +20,14 @@ const (
 	ObjectMagicItem
 )
 
+type Object interface {
+}
+
 type Mover interface {
 	CalcGameTick() // move, collision
 	MakeSendingData() *proto.Message
 	IsValid() bool
-}
-
-type Item interface {
-	DoEffet(p *Player)
-}
-
-type Wepone interface {
-	GiveItem(p *Player)
+	addCollider(objectType int, effect func(obj Object))
 }
 
 type NonMover interface {

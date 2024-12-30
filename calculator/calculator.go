@@ -1,13 +1,16 @@
 package calculator
 
 import (
+	"jungle-royale/chunk"
 	"jungle-royale/object"
 	"jungle-royale/object/physical"
 	"jungle-royale/state"
 )
 
 type Calculator struct {
-	state *state.State
+	chunkNum  int
+	chunkList [][]*chunk.Chunk
+	state     *state.State
 }
 
 type Collider interface {
@@ -15,7 +18,20 @@ type Collider interface {
 }
 
 func NewCalculator(state *state.State) *Calculator {
-	return &Calculator{state}
+	return &Calculator{
+		state: state,
+	}
+}
+
+func (calculator *Calculator) ConfigureCalculator(chunkNum int) {
+	calculator.chunkNum = chunkNum
+	calculator.chunkList = make([][]*chunk.Chunk, chunkNum)
+	for i := 0; i < chunkNum; i++ {
+		calculator.chunkList[i] = make([]*chunk.Chunk, chunkNum)
+		for j := 0; j < chunkNum; j++ {
+			calculator.chunkList[i][j] = chunk.NewChunk()
+		}
+	}
 }
 
 func (calculator *Calculator) IsCollider(colliderA Collider, colliderB Collider) bool {
@@ -34,16 +50,15 @@ func (calculator *Calculator) CalcGameTickState() {
 
 		calculator.state.HealPacks.Range(func(key string, healPack *object.HealPack) bool {
 			if calculator.IsCollider(player, healPack) {
-				calculator.state.Bullets.Delete(playerId)
+				calculator.state.HealPacks.Delete(healPack.Id)
 			}
 			player.GetHealPack()
-			calculator.state.HealPacks.Delete(healPack.Id)
 			return true
 		})
 
 		calculator.state.MagicItems.Range(func(key string, magicItem *object.Magic) bool {
 			if calculator.IsCollider(player, magicItem) {
-				calculator.state.Bullets.Delete(playerId) // collide 되면 bullet을 왜 삭제 하는지?
+				calculator.state.MagicItems.Delete(magicItem.ItemId)
 			}
 			return true
 		})

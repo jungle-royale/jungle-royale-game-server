@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "faker": "^5.5.3",
-    "protobufjs": "^7.4.0"
+    "protobufjs": "^7.4.0",
+    "google-protobuf": "^3.21.4"
   }
 }

@@ -147,3 +147,7 @@ func (player *Player) DoDash() {
 func (player *Player) GetPhysical() *physical.Physical {
 	return &player.physicalObject
 }
+
+func (player *Player) addCollider(objectType int, effect func(obj Object)) {
+
+}

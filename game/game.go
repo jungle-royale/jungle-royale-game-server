@@ -44,6 +44,7 @@ func NewGame(socket *network.Socket, minPlayerNum int) *Game {
 func (game *Game) SetReadyStatus() *Game {
 	game.gameState = waiting
 	game.state.ConfigureState(cons.WAITING_MAP_CHUNK_NUM)
+	game.calculator.ConfigureCalculator(cons.WAITING_MAP_CHUNK_NUM)
 	return game
 }
 
@@ -51,7 +52,10 @@ func (game *Game) SetPlayingStatus() *Game {
 	game.gameState = playing
 
 	// map setting
-	game.state.ConfigureState(game.playerNum)
+	// game.state.ConfigureState(game.playerNum)
+	// game.calculator.ConfigureCalculator(game.playerNum)
+	game.state.ConfigureState(4)
+	game.calculator.ConfigureCalculator(4)
 
 	// player relocation
 	game.state.Players.Range(func(key string, player *object.Player) bool {
@@ -127,11 +131,11 @@ func (game *Game) CalcGameTickLoop() {
 	ticker := time.NewTicker(cons.CalcLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
-	currentTime := time.Now().UnixNano() / int64(time.Millisecond)
+	// currentTime := time.Now().UnixNano() / int64(time.Millisecond)
 	for range ticker.C { // calculation loop
-		tempTime := time.Now().UnixNano() / int64(time.Millisecond)
-		log.Printf("%d\n", tempTime-currentTime)
-		currentTime = tempTime
+		// tempTime := time.Now().UnixNano() / int64(time.Millisecond)
+		// log.Printf("%d\n", tempTime-currentTime)
+		// currentTime = tempTime
 		game.calculator.CalcGameTickState()
 	}
 }
@@ -214,7 +218,8 @@ func (game *Game) BroadcastLoop() {
 			log.Printf("Failed to marshal GameState: %v", err)
 			return
 		}
-
+		// log.Print("healpack: ")
+		// log.Println(healPackList)
 		(*game.socket).Broadcast(data)
 	}
 }
@@ -230,7 +235,7 @@ func (game *Game) handleMessage(clientId string, data []byte) {
 		log.Printf("Failed to unmarshal message from client %s: %v", clientId, err)
 		return
 	}
-
+	// log.Printf(wrapper.String())
 	// dirChange message
 	if dirChange := wrapper.GetChangeDir(); dirChange != nil {
 		game.state.ChangeDirection(clientId, dirChange)
