@@ -1,7 +1,6 @@
 package object
 
 import (
-	"jungle-royale/object/physical"
 	"reflect"
 	"sync"
 
@@ -20,14 +19,6 @@ const (
 	ObjectHealPack
 	ObjectMagicItem
 )
-
-type Collider interface {
-	getPhysical() *physical.Physical
-}
-
-func IsCollider(colliderA Collider, colliderB Collider) bool {
-	return (*colliderA.getPhysical()).IsCollide(colliderB.getPhysical())
-}
 
 type Mover interface {
 	CalcGameTick() // move, collision

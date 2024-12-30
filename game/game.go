@@ -120,23 +120,28 @@ func (game *Game) SetPlayer(clientId string) {
 		return
 	}
 
-	log.Printf("보낸겨: %s", gameInit.String())
+	// log.Printf("보낸겨: %s", gameInit.String())
 }
 
 func (game *Game) CalcGameTickLoop() {
 	ticker := time.NewTicker(cons.CalcLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
+	currentTime := time.Now().UnixNano() / int64(time.Millisecond)
 	for range ticker.C { // calculation loop
+		tempTime := time.Now().UnixNano() / int64(time.Millisecond)
+		log.Printf("%d\n", tempTime-currentTime)
+		currentTime = tempTime
 		game.calculator.CalcGameTickState()
 	}
 }
 
 func (game *Game) CalcSecLoop() {
+
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	gameStartCount := 10
+	gameStartCount := 3
 	for range ticker.C {
 		if game.gameState != playing &&
 			game.playerNum >= game.minPlayerNum &&
@@ -158,6 +163,7 @@ func (game *Game) CalcSecLoop() {
 			gameStartCount--
 			if gameStartCount == -1 {
 				game.SetPlayingStatus()
+				log.Println("game start")
 			}
 		}
 		game.calculator.SecLoop()

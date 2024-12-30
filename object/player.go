@@ -144,6 +144,6 @@ func (player *Player) DoDash() {
 	}
 }
 
-func (player *Player) getPhysical() *physical.Physical {
+func (player *Player) GetPhysical() *physical.Physical {
 	return &player.physicalObject
 }

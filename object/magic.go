@@ -37,7 +37,7 @@ func (magic *Magic) DoEffet(player *Player) {
 	player.GetMagic(magic.magicType)
 }
 
-func (magic *Magic) getPhysical() *physical.Physical {
+func (magic *Magic) GetPhysical() *physical.Physical {
 	return &magic.physicalObject
 }
 

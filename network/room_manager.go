@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	MaxClientCount = 100
+	MaxClientCount = 1000
 	Port           = "8000"
 )
 
@@ -73,7 +73,7 @@ func (socket *RoomManager) Listen() {
 			return
 		}
 
-		log.Printf("Received connection request for Room ID: %s", roomId)
+		// log.Printf("Received connection request for Room ID: %s", roomId)
 
 		newClient := NewClient(RoomId(roomId), conn)
 		socket.clientChannel <- newClient
@@ -84,6 +84,7 @@ func (socket *RoomManager) Listen() {
 			messageType, data, err := conn.ReadMessage()
 			if err != nil {
 				log.Printf("Client %s disconnected: %v", newClient.ID, err)
+				// fmt.Printf("client disconnect\n")
 				break
 			}
 
@@ -102,7 +103,7 @@ func (roomManager *RoomManager) RegisterRoom(roomId RoomId, room *Room) {
 	roomManager.roomsMu.Lock()
 	roomManager.rooms[roomId] = room
 	roomManager.roomsMu.Unlock()
-	log.Printf("룸 개수: %d", len(roomManager.rooms))
+	log.Printf("room: %d", len(roomManager.rooms))
 }
 
 func (roomManager *RoomManager) setClient(client *Client) {
