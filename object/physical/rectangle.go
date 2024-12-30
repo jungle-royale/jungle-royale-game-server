@@ -79,3 +79,12 @@ func (rect *Rectangle) SetCoord(x float32, y float32) {
 	rect.X = x
 	rect.Y = y
 }
+
+func (rect *Rectangle) IsInRectangle(x, y float32) bool {
+	if rect.X < x && x < rect.X+rect.Width &&
+		rect.Y < y && y < rect.Y+rect.Length {
+		return true
+	} else {
+		return false
+	}
+}

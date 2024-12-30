@@ -8,31 +8,28 @@ import (
 	"jungle-royale/object"
 	"jungle-royale/state"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
 	"google.golang.org/protobuf/proto"
 )
 
-const (
-	waiting = iota
-	counting
-	playing
-)
-
 type Game struct {
-	gameState    int
 	minPlayerNum int
+	playingTime  int
 	playerNum    int
 	state        *state.State
 	calculator   *calculator.Calculator
 	socket       *network.Socket
 }
 
-func NewGame(socket *network.Socket, minPlayerNum int) *Game {
+// playing time - second
+func NewGame(socket *network.Socket, minPlayerNum int, playingTime int) *Game {
 	gameState := state.NewState()
 	game := &Game{
 		minPlayerNum: minPlayerNum,
+		playingTime:  playingTime,
 		playerNum:    0,
 		state:        gameState,
 		calculator:   calculator.NewCalculator(gameState),
@@ -42,17 +39,17 @@ func NewGame(socket *network.Socket, minPlayerNum int) *Game {
 }
 
 func (game *Game) SetReadyStatus() *Game {
-	game.gameState = waiting
-	game.state.ConfigureState(cons.WAITING_MAP_CHUNK_NUM)
+	game.state.ConfigureState(cons.WAITING_MAP_CHUNK_NUM, int(math.MaxInt))
+	game.state.GameState = state.Waiting
 	game.calculator.ConfigureCalculator(cons.WAITING_MAP_CHUNK_NUM)
 	return game
 }
 
 func (game *Game) SetPlayingStatus(length int) *Game {
-	game.gameState = playing
+	game.state.GameState = state.Playing
 
 	// map setting
-	game.state.ConfigureState(length)
+	game.state.ConfigureState(length, game.playingTime)
 	game.calculator.ConfigureCalculator(length)
 	// game.state.ConfigureState(4)
 	// game.calculator.ConfigureCalculator(4)
@@ -94,7 +91,7 @@ func (game *Game) StartGame() *Game {
 
 // Room Interface
 func (game *Game) OnClient(clientId string) {
-	if game.gameState == waiting {
+	if game.state.GameState == state.Waiting {
 		game.playerNum++
 		game.SetPlayer(clientId)
 	}
@@ -149,7 +146,7 @@ func (game *Game) CalcSecLoop() {
 
 	gameStartCount := 10
 	for range ticker.C {
-		if game.gameState != playing &&
+		if game.state.GameState != state.Playing &&
 			game.playerNum >= game.minPlayerNum &&
 			gameStartCount >= 0 {
 			Count := &message.GameCount{
@@ -227,11 +224,19 @@ func (game *Game) BroadcastLoop() {
 			return true
 		})
 
+		fallenReadyTileList := make([]*message.FallenReadyTileState, 0)
+		game.state.TileMu.Lock()
+		for v := game.state.FallenReadyTile.Front(); v != nil; v = v.Next() {
+			fallenReadyTileList = append(fallenReadyTileList, v.Value.(*state.Tile).MakeSendingData())
+		}
+		game.state.TileMu.Unlock()
+
 		gameState := &message.GameState{
-			PlayerState:    playerList,
-			BulletState:    bulletList,
-			HealPackState:  healPackList,
-			MagicItemState: magicItemList,
+			PlayerState:          playerList,
+			BulletState:          bulletList,
+			HealPackState:        healPackList,
+			MagicItemState:       magicItemList,
+			FallenReadyTileState: fallenReadyTileList,
 		}
 
 		data, err := proto.Marshal(&message.Wrapper{
