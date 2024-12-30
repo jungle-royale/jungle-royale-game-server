@@ -78,15 +78,18 @@ func (calculator *Calculator) CalcGameTickState() {
 
 		// fallen tile
 		for ft := calculator.state.FallenTile.Front(); ft != nil; ft = ft.Next() {
-			if !ft.Value.(*state.Tile).TileBoundary.IsInRectangle(
-				(*player.GetPhysical()).GetX(),
-				(*player.GetPhysical()).GetY(),
-			) {
-				calculator.state.Players.Delete(playerId)
-				player.DyingStatus.Killer = ""
-				player.DyingStatus.DyingStatus = object.DYING_FALL
-				calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
+			if tile, ok := ft.Value.(*state.Tile); ok {
+				if !tile.TileBoundary.IsInRectangle(
+					(*player.GetPhysical()).GetX(),
+					(*player.GetPhysical()).GetY(),
+				) {
+					calculator.state.Players.Delete(playerId)
+					player.DyingStatus.Killer = ""
+					player.DyingStatus.DyingStatus = object.DYING_FALL
+					calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
+				}
 			}
+
 		}
 
 		return true

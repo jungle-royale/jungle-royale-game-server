@@ -63,7 +63,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	})
 
 	// healpack setting
-	for i := 0; i < game.playerNum*game.playerNum; i++ {
+	for i := 0; i < length*length; i++ {
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
 		newHealPack := object.NewHealPack(x, y)
@@ -71,7 +71,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	}
 
 	// magic item setting
-	for i := 0; i < game.playerNum*game.playerNum/2; i++ {
+	for i := 0; i < length*length; i++ {
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
 		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y)
@@ -130,11 +130,11 @@ func (game *Game) CalcGameTickLoop() {
 	ticker := time.NewTicker(cons.CalcLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
-	// currentTime := time.Now().UnixNano() / int64(time.Millisecond)
+	currentTime := time.Now().UnixNano() / int64(time.Millisecond)
 	for range ticker.C { // calculation loop
-		// tempTime := time.Now().UnixNano() / int64(time.Millisecond)
-		// log.Printf("%d\n", tempTime-currentTime)
-		// currentTime = tempTime
+		tempTime := time.Now().UnixNano() / int64(time.Millisecond)
+		log.Printf("%d\n", tempTime-currentTime)
+		currentTime = tempTime
 		game.calculator.CalcGameTickState()
 	}
 }
@@ -144,7 +144,7 @@ func (game *Game) CalcSecLoop() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	gameStartCount := 10
+	gameStartCount := 3
 	for range ticker.C {
 		if game.state.GameState != state.Playing &&
 			game.playerNum >= game.minPlayerNum &&
@@ -165,7 +165,10 @@ func (game *Game) CalcSecLoop() {
 			(*game.socket).Broadcast(data)
 			gameStartCount--
 			if gameStartCount == 0 {
-				mapLength := game.playerNum / 2
+				mapLength := game.playerNum / 10
+				if mapLength == 0 {
+					mapLength = 1
+				}
 				start := &message.GameStart{
 					MapLength: int32(mapLength),
 				}

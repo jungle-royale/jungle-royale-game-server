@@ -106,7 +106,7 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	}
 	randomNum := randomShuffle(chunkNum * chunkNum)
 	for _, v := range randomNum {
-		state.NonFallenTile.PushBack(NewTile(tempTile[v].V0, tempTile[v].V1))
+		state.NonFallenTile.PushBack(NewTile(tempTile[v].V0*cons.CHUNK_LENGTH, tempTile[v].V1*cons.CHUNK_LENGTH))
 	}
 }
 
