@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -51,6 +52,14 @@ func (socket *RoomManager) Listen() {
 			go socket.handleClientMessage(message)
 		}
 	}()
+
+	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		// start := time.Now()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":200,"message":"Pong"}`)
+		// elapsed := time.Since(start)
+		// fmt.Printf("Request processed in %s\n", start.String())
+	})
 
 	http.HandleFunc("/room", func(w http.ResponseWriter, r *http.Request) {
 		var upgrader = websocket.Upgrader{
