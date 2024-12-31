@@ -1,7 +1,6 @@
 package state
 
 import (
-	"container/list"
 	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/object"
@@ -9,32 +8,9 @@ import (
 	"jungle-royale/util"
 	"math"
 	"math/rand"
-	"sync"
 
 	"github.com/google/uuid"
 )
-
-type Tile struct {
-	TileBoundary *physical.Rectangle
-}
-
-func NewTile(x, y float32) *Tile {
-	return &Tile{
-		&physical.Rectangle{
-			X:      x,
-			Y:      y,
-			Width:  float32(cons.CHUNK_LENGTH),
-			Length: float32(cons.CHUNK_LENGTH),
-		},
-	}
-}
-
-func (tile *Tile) MakeSendingData() *message.FallenReadyTileState {
-	return &message.FallenReadyTileState{
-		X: tile.TileBoundary.X,
-		Y: tile.TileBoundary.Y,
-	}
-}
 
 // gamestate
 const (
@@ -44,35 +20,29 @@ const (
 )
 
 type State struct {
-	GameState       int
-	Players         *util.Map[string, *object.Player]
-	PlayerDead      *util.Map[string, *object.PlayerDead]
-	Bullets         *util.Map[string, *object.Bullet]
-	HealPacks       *util.Map[string, *object.HealPack]
-	MagicItems      *util.Map[string, *object.Magic]
-	MapBoundary     *physical.Rectangle
-	NonFallenTile   *list.List
-	FallenReadyTile *list.List
-	FallenTile      *list.List
-	TileMu          sync.Mutex // only for FallenReadyTile
-	FallenTime      int
-	MaxCoord        float32
-	LastGameSec     int
+	GameState    int
+	Tiles        *util.Map[int, *object.Tile]
+	Players      *util.Map[string, *object.Player]
+	PlayerDead   *util.Map[string, *object.PlayerDead]
+	Bullets      *util.Map[string, *object.Bullet]
+	HealPacks    *util.Map[string, *object.HealPack]
+	MagicItems   *util.Map[string, *object.Magic]
+	MapBoundary  *physical.Rectangle
+	FallenTime   int
+	MaxCoord     float32
+	LastGameTick int
 }
 
 func NewState() *State {
 	return &State{
-		Players:         util.NewSyncMap[string, *object.Player](),
-		PlayerDead:      util.NewSyncMap[string, *object.PlayerDead](),
-		Bullets:         util.NewSyncMap[string, *object.Bullet](),
-		HealPacks:       util.NewSyncMap[string, *object.HealPack](),
-		MagicItems:      util.NewSyncMap[string, *object.Magic](),
-		NonFallenTile:   list.New(),
-		FallenReadyTile: list.New(),
-		FallenTile:      list.New(),
-		TileMu:          sync.Mutex{},
-		FallenTime:      int(math.MaxInt),
-		LastGameSec:     -1,
+		Tiles:        util.NewSyncMap[int, *object.Tile](),
+		Players:      util.NewSyncMap[string, *object.Player](),
+		PlayerDead:   util.NewSyncMap[string, *object.PlayerDead](),
+		Bullets:      util.NewSyncMap[string, *object.Bullet](),
+		HealPacks:    util.NewSyncMap[string, *object.HealPack](),
+		MagicItems:   util.NewSyncMap[string, *object.Magic](),
+		FallenTime:   int(math.MaxInt),
+		LastGameTick: -1,
 	}
 }
 
@@ -93,21 +63,22 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	state.MaxCoord = float32(chunkNum * cons.CHUNK_LENGTH)
 	state.MapBoundary = physical.NewRectangle(0, 0, state.MaxCoord, state.MaxCoord)
 
-	// nonfallen tile setting
-	state.FallenTime = playingTime / (chunkNum * chunkNum)
+	state.LastGameTick = playingTime * 60
 
-	tempTile := make(map[int]util.Pair[float32, float32])
-	idx := 0
+	// map tile setting
+	tileIdx := 0
 	for i := 0; i < chunkNum; i++ {
 		for j := 0; j < chunkNum; j++ {
-			tempTile[idx] = util.Pair[float32, float32]{V0: float32(i), V1: float32(j)}
-			idx++
+			state.Tiles.Store(tileIdx, object.NewTile(
+				tileIdx, float32(i*cons.CHUNK_LENGTH),
+				float32(j*cons.CHUNK_LENGTH),
+			))
+			tileIdx++
 		}
 	}
-	randomNum := randomShuffle(chunkNum * chunkNum)
-	for _, v := range randomNum {
-		state.NonFallenTile.PushBack(NewTile(tempTile[v].V0, tempTile[v].V1))
-	}
+
+	// nonfallen tile setting
+	state.FallenTime = (playingTime * 60) / (chunkNum * chunkNum)
 }
 
 func (state *State) AddPlayer(id string, x float32, y float32) {

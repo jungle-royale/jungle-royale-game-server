@@ -34,7 +34,7 @@ message GameState {
     repeated HealPackState healPackState = 3;
     repeated MagicItemState magicItemState = 4;
     repeated PlayerDeadState playerDeadState = 5;
-    repeated FallenReadyTileState fallenReadyTileState = 6;
+    repeated TileState tileState = 6;
 }
 
 message PlayerState {
@@ -43,6 +43,8 @@ message PlayerState {
     float y = 3;
     int32 health = 4;
     int32 magicType = 5;
+    float angle = 6;
+    int32 dashCoolTime = 7;
 }
 
 message CreateBullet {
@@ -82,8 +84,8 @@ message MagicItemState {
 }
 
 message PlayerDeadState {
-    string killer = 1;
-    string dead = 2;
+    string killerId = 1;
+    string deadId = 2;
     int32 dyingStatus = 3;
     // 1: snow
     // 2: stone
@@ -91,7 +93,8 @@ message PlayerDeadState {
     // 4: fall
 }
 
-message FallenReadyTileState {
-    float x = 1;
-    float y = 2;
+message TileState {
+    int32 tileId = 1;
+    float x = 2;
+    float y = 3;
 }

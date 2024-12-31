@@ -1,6 +1,7 @@
 package util
 
 import (
+	"math/rand"
 	"sync"
 )
 
@@ -123,4 +124,32 @@ func (m *Map[Key, Value]) ValueList() []Value {
 		}
 	}
 	return values
+}
+
+// PopRandom: 무작위로 한 element를 뽑아서 삭제 후 (키, 값, 성공여부)를 반환
+func (m *Map[Key, Value]) PopRandom() (Key, Value, bool) {
+	var zeroKey Key
+	var zeroVal Value
+
+	// 모든 키 목록을 가져옴
+	keys := m.KeyList()
+	if len(keys) == 0 {
+		// 맵이 비어있으면 false 반환
+		return zeroKey, zeroVal, false
+	}
+
+	// 무작위 인덱스 선택
+	idx := rand.Intn(len(keys))
+	chosenKey := keys[idx]
+
+	// 키에 해당하는 값 가져오기
+	valPtr, ok := m.Get(chosenKey)
+	if !ok {
+		return zeroKey, zeroVal, false
+	}
+
+	// 맵에서 삭제
+	m.Delete(chosenKey)
+
+	return chosenKey, *valPtr, true
 }

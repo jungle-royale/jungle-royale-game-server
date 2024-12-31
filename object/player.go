@@ -41,8 +41,8 @@ func NewPlayerDead(killer string, dead string, ds int) *PlayerDead {
 
 func (pd *PlayerDead) MakeSendingData() *message.PlayerDeadState {
 	return &message.PlayerDeadState{
-		Killer:      pd.Killer,
-		Dead:        pd.dead,
+		KillerId:    pd.Killer,
+		DeadId:      pd.dead,
 		DyingStatus: int32(pd.DyingStatus),
 	}
 }
@@ -92,7 +92,9 @@ func (player *Player) CalcGameTick() {
 		dx := player.speed * float32(math.Sin(player.angle*(math.Pi/180)))
 		dy := player.speed * float32(math.Cos(player.angle*(math.Pi/180))) * -1
 		player.physicalObject.Move(dx, dy)
-		player.dashCoolTime--
+		if player.isDashing {
+			player.dashCoolTime--
+		}
 	}
 	player.mu.Unlock()
 }
@@ -110,11 +112,13 @@ func (player *Player) DirChange(angle float64, isMoved bool) {
 
 func (player *Player) MakeSendingData() *message.PlayerState {
 	return &message.PlayerState{
-		Id:        player.id,
-		X:         player.physicalObject.GetX(),
-		Y:         player.physicalObject.GetY(),
-		Health:    int32(player.health),
-		MagicType: int32(player.MagicType),
+		Id:           player.id,
+		X:            player.physicalObject.GetX(),
+		Y:            player.physicalObject.GetY(),
+		Health:       int32(player.health),
+		MagicType:    int32(player.MagicType),
+		Angle:        float32(player.angle),
+		DashCoolTime: int32(player.dashCoolTime),
 	}
 }
 

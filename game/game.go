@@ -63,7 +63,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	})
 
 	// healpack setting
-	for i := 0; i < game.playerNum*game.playerNum; i++ {
+	for i := 0; i < length*length; i++ {
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
 		newHealPack := object.NewHealPack(x, y)
@@ -71,7 +71,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	}
 
 	// magic item setting
-	for i := 0; i < game.playerNum*game.playerNum/2; i++ {
+	for i := 0; i < length*length; i++ {
 		x := float32(rand.Intn(int(game.state.MaxCoord)))
 		y := float32(rand.Intn(int(game.state.MaxCoord)))
 		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y)
@@ -144,7 +144,7 @@ func (game *Game) CalcSecLoop() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	gameStartCount := 10
+	gameStartCount := 3
 	for range ticker.C {
 		if game.state.GameState != state.Playing &&
 			game.playerNum >= game.minPlayerNum &&
@@ -165,9 +165,12 @@ func (game *Game) CalcSecLoop() {
 			(*game.socket).Broadcast(data)
 			gameStartCount--
 			if gameStartCount == 0 {
-				mapLength := game.playerNum / 2
+				mapLength := game.playerNum / 10
+				if mapLength == 0 {
+					mapLength = 1
+				}
 				start := &message.GameStart{
-					MapLength: int32(mapLength),
+					MapLength: int32(mapLength * cons.CHUNK_LENGTH),
 				}
 				gameStart, err := proto.Marshal(&message.Wrapper{
 					MessageType: &message.Wrapper_GameStart{
@@ -224,19 +227,19 @@ func (game *Game) BroadcastLoop() {
 			return true
 		})
 
-		fallenReadyTileList := make([]*message.FallenReadyTileState, 0)
-		game.state.TileMu.Lock()
-		for v := game.state.FallenReadyTile.Front(); v != nil; v = v.Next() {
-			fallenReadyTileList = append(fallenReadyTileList, v.Value.(*state.Tile).MakeSendingData())
+		tileStateList := make([]*message.TileState, 0)
+		tileState := game.state.Tiles.ValueList()
+		for _, tile := range tileState {
+			tileStateList = append(tileStateList, tile.MakeSendingData())
 		}
-		game.state.TileMu.Unlock()
 
 		gameState := &message.GameState{
-			PlayerState:          playerList,
-			BulletState:          bulletList,
-			HealPackState:        healPackList,
-			MagicItemState:       magicItemList,
-			FallenReadyTileState: fallenReadyTileList,
+			PlayerState:     playerList,
+			BulletState:     bulletList,
+			HealPackState:   healPackList,
+			MagicItemState:  magicItemList,
+			PlayerDeadState: playerDeadList,
+			TileState:       tileStateList,
 		}
 
 		data, err := proto.Marshal(&message.Wrapper{
