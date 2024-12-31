@@ -4,7 +4,6 @@ import (
 	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/object"
-	"jungle-royale/object/physical"
 	"jungle-royale/util"
 	"math"
 	"math/rand"
@@ -20,14 +19,14 @@ const (
 )
 
 type State struct {
-	GameState    int
-	Tiles        *util.Map[int, *object.Tile]
-	Players      *util.Map[string, *object.Player]
-	PlayerDead   *util.Map[string, *object.PlayerDead]
-	Bullets      *util.Map[string, *object.Bullet]
-	HealPacks    *util.Map[string, *object.HealPack]
-	MagicItems   *util.Map[string, *object.Magic]
-	MapBoundary  *physical.Rectangle
+	GameState  int
+	Tiles      *util.Map[int, *object.Tile]
+	Players    *util.Map[string, *object.Player]
+	PlayerDead *util.Map[string, *object.PlayerDead]
+	Bullets    *util.Map[string, *object.Bullet]
+	HealPacks  *util.Map[string, *object.HealPack]
+	MagicItems *util.Map[string, *object.Magic]
+	// MapBoundary  *physical.Rectangle
 	FallenTime   int
 	MaxCoord     float32
 	LastGameTick int
@@ -61,7 +60,7 @@ func randomShuffle(n int) []int {
 
 func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	state.MaxCoord = float32(chunkNum * cons.CHUNK_LENGTH)
-	state.MapBoundary = physical.NewRectangle(0, 0, state.MaxCoord, state.MaxCoord)
+	// state.MapBoundary = physical.NewRectangle(0, 0, state.MaxCoord, state.MaxCoord)
 
 	state.LastGameTick = playingTime * 60
 
@@ -70,7 +69,8 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	for i := 0; i < chunkNum; i++ {
 		for j := 0; j < chunkNum; j++ {
 			state.Tiles.Store(tileIdx, object.NewTile(
-				tileIdx, float32(i*cons.CHUNK_LENGTH),
+				tileIdx,
+				float32(i*cons.CHUNK_LENGTH),
 				float32(j*cons.CHUNK_LENGTH),
 			))
 			tileIdx++
