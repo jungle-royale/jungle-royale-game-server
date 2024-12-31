@@ -2,7 +2,6 @@ package calculator
 
 import (
 	"jungle-royale/chunk"
-	"jungle-royale/cons"
 	"jungle-royale/object"
 	"jungle-royale/object/physical"
 	"jungle-royale/state"
@@ -53,8 +52,8 @@ func (calculator *Calculator) CalcGameTickState() {
 		calculator.state.HealPacks.Range(func(key string, healPack *object.HealPack) bool {
 			if calculator.IsCollider(player, healPack) {
 				calculator.state.HealPacks.Delete(healPack.Id)
+				player.GetHealPack()
 			}
-			player.GetHealPack()
 			return true
 		})
 
@@ -74,22 +73,6 @@ func (calculator *Calculator) CalcGameTickState() {
 				player.DyingStatus.DyingStatus = object.DYING_FALL
 				calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
 			}
-		}
-
-		// fallen tile
-		for ft := calculator.state.FallenTile.Front(); ft != nil; ft = ft.Next() {
-			if tile, ok := ft.Value.(*state.Tile); ok {
-				if !tile.TileBoundary.IsInRectangle(
-					(*player.GetPhysical()).GetX(),
-					(*player.GetPhysical()).GetY(),
-				) {
-					calculator.state.Players.Delete(playerId)
-					player.DyingStatus.Killer = ""
-					player.DyingStatus.DyingStatus = object.DYING_FALL
-					calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
-				}
-			}
-
 		}
 
 		return true
@@ -113,23 +96,14 @@ func (calculator *Calculator) CalcGameTickState() {
 		return true
 	})
 
+	// tile fall
+	if calculator.state.GameState == state.Playing {
+		if calculator.state.LastGameTick%calculator.state.FallenTime == 0 {
+			calculator.state.Tiles.PopRandom()
+		}
+		calculator.state.GameState--
+	}
 }
 
 func (calculator *Calculator) SecLoop() {
-	currentState := calculator.state
-	if currentState.GameState == state.Playing {
-		if currentState.LastGameSec%currentState.FallenTime == cons.TILE_FALL_ALERT_TIME {
-			currentState.TileMu.Lock()
-			currentState.FallenReadyTile.PushBack(currentState.NonFallenTile.Front())
-			currentState.TileMu.Unlock()
-			currentState.NonFallenTile.Remove(currentState.NonFallenTile.Front())
-		}
-		if currentState.LastGameSec%currentState.FallenTime == 0 {
-			currentState.FallenTile.PushBack(currentState.FallenReadyTile.Front())
-			currentState.TileMu.Lock()
-			currentState.FallenReadyTile.Remove(currentState.FallenTile.Front())
-			currentState.TileMu.Unlock()
-		}
-		currentState.LastGameSec--
-	}
 }

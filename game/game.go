@@ -130,11 +130,11 @@ func (game *Game) CalcGameTickLoop() {
 	ticker := time.NewTicker(cons.CalcLoopInterval * time.Millisecond)
 	defer ticker.Stop()
 
-	currentTime := time.Now().UnixNano() / int64(time.Millisecond)
+	// currentTime := time.Now().UnixNano() / int64(time.Millisecond)
 	for range ticker.C { // calculation loop
-		tempTime := time.Now().UnixNano() / int64(time.Millisecond)
-		log.Printf("%d\n", tempTime-currentTime)
-		currentTime = tempTime
+		// tempTime := time.Now().UnixNano() / int64(time.Millisecond)
+		// log.Printf("%d\n", tempTime-currentTime)
+		// currentTime = tempTime
 		game.calculator.CalcGameTickState()
 	}
 }
@@ -170,7 +170,7 @@ func (game *Game) CalcSecLoop() {
 					mapLength = 1
 				}
 				start := &message.GameStart{
-					MapLength: int32(mapLength),
+					MapLength: int32(mapLength * cons.CHUNK_LENGTH),
 				}
 				gameStart, err := proto.Marshal(&message.Wrapper{
 					MessageType: &message.Wrapper_GameStart{
@@ -227,19 +227,19 @@ func (game *Game) BroadcastLoop() {
 			return true
 		})
 
-		fallenReadyTileList := make([]*message.FallenReadyTileState, 0)
-		game.state.TileMu.Lock()
-		for v := game.state.FallenReadyTile.Front(); v != nil; v = v.Next() {
-			fallenReadyTileList = append(fallenReadyTileList, v.Value.(*state.Tile).MakeSendingData())
+		tileStateList := make([]*message.TileState, 0)
+		tileState := game.state.Tiles.ValueList()
+		for _, tile := range tileState {
+			tileStateList = append(tileStateList, tile.MakeSendingData())
 		}
-		game.state.TileMu.Unlock()
 
 		gameState := &message.GameState{
-			PlayerState:          playerList,
-			BulletState:          bulletList,
-			HealPackState:        healPackList,
-			MagicItemState:       magicItemList,
-			FallenReadyTileState: fallenReadyTileList,
+			PlayerState:     playerList,
+			BulletState:     bulletList,
+			HealPackState:   healPackList,
+			MagicItemState:  magicItemList,
+			PlayerDeadState: playerDeadList,
+			TileState:       tileStateList,
 		}
 
 		data, err := proto.Marshal(&message.Wrapper{

@@ -41,6 +41,7 @@ message PlayerState {
     float y = 3;
     int32 health = 4;
     int32 magicType = 5;
+    float angle = 6;
 }
 
 message CreateBullet {
