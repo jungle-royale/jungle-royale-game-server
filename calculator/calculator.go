@@ -64,17 +64,6 @@ func (calculator *Calculator) CalcGameTickState() {
 			return true
 		})
 
-		// // map boundary
-		// if !calculator.state.MapBoundary.IsInRectangle(
-		// 	(*player.GetPhysical()).GetX(), (*player.GetPhysical()).GetY()) {
-		// 	if calculator.state.GameState == state.Playing {
-		// 		calculator.state.Players.Delete(playerId)
-		// 		player.DyingStatus.Killer = ""
-		// 		player.DyingStatus.DyingStatus = object.DYING_FALL
-		// 		calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
-		// 	}
-		// }
-
 		// check player is on tile
 		if calculator.state.GameState == state.Playing {
 			onTile := false
@@ -120,7 +109,7 @@ func (calculator *Calculator) CalcGameTickState() {
 		if calculator.state.LastGameTick%calculator.state.FallenTime == 0 {
 			calculator.state.Tiles.PopRandom()
 		}
-		calculator.state.GameState--
+		calculator.state.FallenTime--
 	}
 }
 

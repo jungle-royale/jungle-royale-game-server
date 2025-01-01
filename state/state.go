@@ -111,6 +111,12 @@ func (state *State) ChangeDirection(clientId string, msg *message.ChangeDir) {
 	}
 }
 
+func (state *State) ChangeAngle(clientId string, msg *message.ChangeAngle) {
+	if player, exists := state.Players.Get(clientId); exists {
+		(*player).AngleChange(msg.GetAngle())
+	}
+}
+
 func (state *State) CreateBullet(clientId string, msg *message.CreateBullet) {
 	if player, exists := state.Players.Get(clientId); exists {
 		state.AddBullet((*(*player).GetPhysical()).GetX(), (*(*player).GetPhysical()).GetY(), clientId, msg)
