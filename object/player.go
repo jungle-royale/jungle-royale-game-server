@@ -9,7 +9,7 @@ import (
 )
 
 const PLAYER_SPEED = 0.3
-const DASH_SPEED = 1.2
+const DASH_SPEED = 0.6
 const DASH_TICK = 5
 const DASH_COOLTIME = 60 // 1sec
 const PLAYER_RADIOUS = 0.5
@@ -59,11 +59,12 @@ type Player struct {
 	id             string
 	dx             float32
 	dy             float32
-	dir            float64
+	dir            float64 // (dx, dy)
 	angle          float32 // degree
 	speed          float32
 	isMoveing      bool
 	isDashing      bool
+	dashTime       int
 	dashCoolTime   int
 	health         int
 	MagicType      int
@@ -85,6 +86,7 @@ func NewPlayer(id string, x float32, y float32) *Player {
 		false,
 		false,
 		0,
+		0,
 		100,
 		BULLET_NONE,
 		NewPlayerDead("", id, DYING_NONE),
@@ -103,16 +105,18 @@ func (player *Player) CalcGameTick() {
 	player.mu.Lock()
 	if player.isMoveing {
 		player.physicalObject.Move(player.dx, player.dy)
-		if player.isDashing {
-			player.dashCoolTime--
-			if player.dashCoolTime == 0 {
-				player.mu.Lock()
-				player.isDashing = false
-				player.speed = PLAYER_SPEED
-				player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
-				player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
-				player.mu.Unlock()
-			}
+	}
+	if player.dashCoolTime > 0 {
+		player.dashCoolTime--
+	}
+	if player.dashTime > 0 {
+		player.dashTime--
+		if player.dashTime == 0 {
+			player.isDashing = false
+			player.dashCoolTime = DASH_COOLTIME
+			player.speed = PLAYER_SPEED
+			player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
+			player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
 		}
 	}
 	player.mu.Unlock()
@@ -211,7 +215,7 @@ func (player *Player) DoDash() {
 		player.speed = DASH_SPEED
 		player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
 		player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
-		player.dashCoolTime = DASH_COOLTIME
+		player.dashTime = DASH_TICK
 		player.mu.Unlock()
 	}
 }
