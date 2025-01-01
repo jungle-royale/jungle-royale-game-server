@@ -118,11 +118,9 @@ func (calculator *Calculator) CalcGameTickState() {
 				return t.TileState == object.TILE_NORMAL
 			})
 			stile.SetTileState(object.TILE_DANGEROUS)
-			ticker := time.NewTicker(cons.TILE_FALL_ALERT_TIME * time.Second)
-			defer ticker.Stop()
-			for range ticker.C {
+			time.AfterFunc(cons.TILE_FALL_ALERT_TIME*time.Second, func() {
 				calculator.state.Tiles.Delete(tileId)
-			}
+			})
 		}
 		calculator.state.LastGameTick--
 	}

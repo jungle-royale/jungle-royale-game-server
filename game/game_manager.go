@@ -17,7 +17,7 @@ const (
 type GameId string // room create 할 때 받음
 
 type GameManager struct {
-	rooms                map[GameId]*Room
+	games                map[GameId]*Game
 	roomsMu              sync.Mutex
 	clientChannel        chan *Client
 	clientMessageChannel chan *ClientMessage
@@ -27,7 +27,7 @@ type GameManager struct {
 
 func NewGameManager() *GameManager {
 	socket := GameManager{
-		make(map[GameId]*Room),
+		make(map[GameId]*Game),
 		sync.Mutex{},
 		make(chan *Client, MaxClientCount),
 		make(chan *ClientMessage, MaxClientCount),
@@ -35,17 +35,17 @@ func NewGameManager() *GameManager {
 	return &socket
 }
 
-func (socket *GameManager) Listen() {
+func (gameManager *GameManager) Listen() {
 
 	go func() {
-		for client := range socket.clientChannel {
-			go socket.setClient(client)
+		for client := range gameManager.clientChannel {
+			go gameManager.setClient(client)
 		}
 	}()
 
 	go func() {
-		for message := range socket.clientMessageChannel {
-			go socket.handleClientMessage(message)
+		for message := range gameManager.clientMessageChannel {
+			go gameManager.handleClientMessage(message)
 		}
 	}()
 
@@ -87,7 +87,7 @@ func (socket *GameManager) Listen() {
 		}
 
 		newClient := NewClient(GameId(roomId), conn)
-		socket.clientChannel <- newClient
+		gameManager.clientChannel <- newClient
 
 		log.Printf("Client %s connected", newClient.ID)
 
@@ -99,7 +99,7 @@ func (socket *GameManager) Listen() {
 				break
 			}
 
-			socket.clientMessageChannel <- NewClientMessage(messageType, newClient.RoomID, newClient.ID, data)
+			gameManager.clientMessageChannel <- NewClientMessage(messageType, newClient.RoomID, newClient.ID, data)
 		}
 	})
 
@@ -116,15 +116,15 @@ func (gameManager *GameManager) CreateRoom(
 	playingTime int,
 ) {
 	// gameManager := game.NewgameManager()
-	var newRoom Room = NewGame(minPlayerNum, playingTime).SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
+	newRoom := NewGame(minPlayerNum, playingTime).SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
 	gameManager.roomsMu.Lock()
-	gameManager.rooms[roomId] = &newRoom
+	gameManager.games[roomId] = newRoom
 	gameManager.roomsMu.Unlock()
-	log.Printf("room: %d", len(gameManager.rooms))
+	log.Printf("room: %d", len(gameManager.games))
 }
 
 func (gameManager *GameManager) setClient(client *Client) {
-	room, exists := gameManager.rooms[client.RoomID]
+	room, exists := gameManager.games[client.RoomID]
 	if !exists || room == nil {
 		log.Printf("No Room: %s", client.RoomID)
 		return
@@ -135,7 +135,7 @@ func (gameManager *GameManager) setClient(client *Client) {
 func (gameManager *GameManager) handleClientMessage(clientMessage *ClientMessage) {
 	roomId := clientMessage.RoomId
 	clientId := clientMessage.ClientId
-	room, exists := gameManager.rooms[roomId]
+	room, exists := gameManager.games[roomId]
 	if !exists || room == nil {
 		log.Printf("No Room: %s", roomId)
 		return
