@@ -1,4 +1,4 @@
-package network
+package game
 
 import (
 	"fmt"
@@ -14,24 +14,20 @@ const (
 	Port           = "8000"
 )
 
-type RoomId string // room create 할 때 받음
+type GameId string // room create 할 때 받음
 
-type RoomManager struct {
-	rooms                map[RoomId]*Room
+type GameManager struct {
+	rooms                map[GameId]*Room
 	roomsMu              sync.Mutex
-	clients              map[ClientId]*Client
-	clientsMu            sync.Mutex
 	clientChannel        chan *Client
 	clientMessageChannel chan *ClientMessage
 }
 
 // add game
 
-func NewRoomManager() *RoomManager {
-	socket := RoomManager{
-		make(map[RoomId]*Room),
-		sync.Mutex{},
-		make(map[ClientId]*Client),
+func NewGameManager() *GameManager {
+	socket := GameManager{
+		make(map[GameId]*Room),
 		sync.Mutex{},
 		make(chan *Client, MaxClientCount),
 		make(chan *ClientMessage, MaxClientCount),
@@ -39,7 +35,7 @@ func NewRoomManager() *RoomManager {
 	return &socket
 }
 
-func (socket *RoomManager) Listen() {
+func (socket *GameManager) Listen() {
 
 	go func() {
 		for client := range socket.clientChannel {
@@ -54,6 +50,14 @@ func (socket *RoomManager) Listen() {
 	}()
 
 	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		// start := time.Now()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":200,"message":"Pong"}`)
+		// elapsed := time.Since(start)
+		// fmt.Printf("Request processed in %s\n", start.String())
+	})
+
+	http.HandleFunc("/game/start", func(w http.ResponseWriter, r *http.Request) {
 		// start := time.Now()
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"status":200,"message":"Pong"}`)
@@ -82,9 +86,7 @@ func (socket *RoomManager) Listen() {
 			return
 		}
 
-		// log.Printf("Received connection request for Room ID: %s", roomId)
-
-		newClient := NewClient(RoomId(roomId), conn)
+		newClient := NewClient(GameId(roomId), conn)
 		socket.clientChannel <- newClient
 
 		log.Printf("Client %s connected", newClient.ID)
@@ -108,50 +110,35 @@ func (socket *RoomManager) Listen() {
 	}
 }
 
-func (roomManager *RoomManager) RegisterRoom(roomId RoomId, room *Room) {
-	roomManager.roomsMu.Lock()
-	roomManager.rooms[roomId] = room
-	roomManager.roomsMu.Unlock()
-	log.Printf("room: %d", len(roomManager.rooms))
+func (gameManager *GameManager) CreateRoom(
+	roomId GameId,
+	minPlayerNum int,
+	playingTime int,
+) {
+	// gameManager := game.NewgameManager()
+	var newRoom Room = NewGame(minPlayerNum, playingTime).SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
+	gameManager.roomsMu.Lock()
+	gameManager.rooms[roomId] = &newRoom
+	gameManager.roomsMu.Unlock()
+	log.Printf("room: %d", len(gameManager.rooms))
 }
 
-func (roomManager *RoomManager) setClient(client *Client) {
-	roomManager.clientsMu.Lock()
-	roomManager.clients[client.ID] = client
-	roomManager.clientsMu.Unlock()
-	room, exists := roomManager.rooms[client.RoomID]
+func (gameManager *GameManager) setClient(client *Client) {
+	room, exists := gameManager.rooms[client.RoomID]
 	if !exists || room == nil {
 		log.Printf("No Room: %s", client.RoomID)
 		return
 	}
-	(*room).OnClient(string(client.ID))
+	(*room).OnClient(client)
 }
 
-func (roomManager *RoomManager) handleClientMessage(clientMessage *ClientMessage) {
+func (gameManager *GameManager) handleClientMessage(clientMessage *ClientMessage) {
 	roomId := clientMessage.RoomId
 	clientId := clientMessage.ClientId
-	room, exists := roomManager.rooms[roomId]
+	room, exists := gameManager.rooms[roomId]
 	if !exists || room == nil {
 		log.Printf("No Room: %s", roomId)
 		return
 	}
 	(*room).OnMessage(clientMessage.Data, string(clientId))
-}
-
-// ######## Socket Interface 구현
-
-func (roomManager *RoomManager) Send(data []byte, clientId string) error {
-	return roomManager.clients[ClientId(clientId)].write(data)
-}
-
-func (roomManager *RoomManager) Broadcast(data []byte) {
-	roomManager.clientsMu.Lock()
-	for id, client := range roomManager.clients {
-		if err := client.write(data); err != nil {
-			log.Printf("Failed to send message to client %s: %v", id, err)
-			client.close()
-			delete(roomManager.clients, id)
-		}
-	}
-	roomManager.clientsMu.Unlock()
 }

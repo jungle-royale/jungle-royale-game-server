@@ -1,6 +1,6 @@
-package network
+package game
 
 type Room interface {
-	OnClient(clientId string)
+	OnClient(client *Client)
 	OnMessage(data []byte, id string)
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"jungle-royale/game"
-	"jungle-royale/network"
 	"log"
 	"runtime"
 	"time"
@@ -15,15 +14,12 @@ func main() {
 
 	runtime.GOMAXPROCS(2)
 
-	roomManager := network.NewRoomManager()
-
-	var socket network.Socket = roomManager
+	gameManager := game.NewGameManager()
 
 	go func() {
-		time.Sleep(1000 * time.Millisecond)                                                    // 3초
-		var testGame network.Room = game.NewGame(&socket, 1, 200).SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
-		roomManager.RegisterRoom(network.RoomId("test"), &testGame)
+		time.Sleep(1000 * time.Millisecond) // 3초
+		gameManager.CreateRoom("test", 10, 200)
 	}()
 
-	roomManager.Listen()
+	gameManager.Listen()
 }

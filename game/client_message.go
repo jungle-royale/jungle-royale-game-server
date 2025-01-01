@@ -1,15 +1,15 @@
-package network
+package game
 
 type ClientMessage struct {
 	MessageType int
-	RoomId      RoomId
+	RoomId      GameId
 	ClientId    ClientId
 	Data        []byte
 }
 
 func NewClientMessage(
 	messageType int,
-	roomId RoomId,
+	roomId GameId,
 	clientId ClientId,
 	data []byte,
 ) *ClientMessage {
