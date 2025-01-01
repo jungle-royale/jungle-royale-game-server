@@ -62,24 +62,24 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 
 	// player relocation
 	game.state.Players.Range(func(key string, player *object.Player) bool {
-		x := float32(rand.Intn(int(game.state.MaxCoord)))
-		y := float32(rand.Intn(int(game.state.MaxCoord)))
+		x := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
+		y := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		player.SetLocation(x, y)
 		return true
 	})
 
 	// healpack setting
 	for i := 0; i < length*length; i++ {
-		x := float32(rand.Intn(int(game.state.MaxCoord)))
-		y := float32(rand.Intn(int(game.state.MaxCoord)))
+		x := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
+		y := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		newHealPack := object.NewHealPack(x, y)
 		game.state.HealPacks.Store(newHealPack.Id, newHealPack)
 	}
 
 	// magic item setting
 	for i := 0; i < length*length; i++ {
-		x := float32(rand.Intn(int(game.state.MaxCoord)))
-		y := float32(rand.Intn(int(game.state.MaxCoord)))
+		x := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
+		y := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y)
 		newFireItem := object.NewMagicItem(object.FIRE_MAGIC, x, y)
 		game.state.MagicItems.Store(newStoneItem.ItemId, newStoneItem)
