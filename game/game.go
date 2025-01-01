@@ -4,12 +4,12 @@ import (
 	"jungle-royale/calculator"
 	"jungle-royale/cons"
 	"jungle-royale/message"
-	"jungle-royale/network"
 	"jungle-royale/object"
 	"jungle-royale/state"
 	"log"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -21,11 +21,15 @@ type Game struct {
 	playerNum    int
 	state        *state.State
 	calculator   *calculator.Calculator
-	socket       *network.Socket
+	clients      map[ClientId]*Client
+	clientsMu    sync.Mutex
 }
 
 // playing time - second
-func NewGame(socket *network.Socket, minPlayerNum int, playingTime int) *Game {
+func NewGame(
+	minPlayerNum int,
+	playingTime int,
+) *Game {
 	gameState := state.NewState()
 	game := &Game{
 		minPlayerNum: minPlayerNum,
@@ -33,7 +37,8 @@ func NewGame(socket *network.Socket, minPlayerNum int, playingTime int) *Game {
 		playerNum:    0,
 		state:        gameState,
 		calculator:   calculator.NewCalculator(gameState),
-		socket:       socket,
+		clients:      make(map[ClientId]*Client),
+		clientsMu:    sync.Mutex{},
 	}
 	return game
 }
@@ -90,14 +95,17 @@ func (game *Game) StartGame() *Game {
 }
 
 // Room Interface
-func (game *Game) OnClient(clientId string) {
+func (game *Game) OnClient(client *Client) {
 	if game.state.GameState == state.Waiting {
 		game.playerNum++
-		game.SetPlayer(clientId)
+		game.SetPlayer(client)
+		game.clients[client.ID] = client
 	}
 }
 
-func (game *Game) SetPlayer(clientId string) {
+func (game *Game) SetPlayer(client *Client) {
+
+	clientId := string(client.ID)
 
 	x := rand.Intn(int(game.state.MaxCoord))
 	y := rand.Intn(int(game.state.MaxCoord))
@@ -118,7 +126,7 @@ func (game *Game) SetPlayer(clientId string) {
 		return
 	}
 
-	if err := (*game.socket).Send(data, clientId); err != nil {
+	if err := client.write(data); err != nil {
 		log.Printf("Failed to send GameInit message to client %s: %v", clientId, err)
 		return
 	}
@@ -161,8 +169,11 @@ func (game *Game) CalcSecLoop() {
 				log.Printf("Failed to marshal GameState: %v", err)
 				return
 			}
+
 			log.Printf("game play in %d", gameStartCount)
-			(*game.socket).Broadcast(data)
+
+			game.broadcast(data)
+
 			gameStartCount--
 			if gameStartCount == 0 {
 				mapLength := game.playerNum / 10
@@ -181,7 +192,8 @@ func (game *Game) CalcSecLoop() {
 					log.Printf("Failed to marshal GameState: %v", err)
 					return
 				}
-				(*game.socket).Broadcast(gameStart)
+
+				game.broadcast(gameStart)
 
 				game.SetPlayingStatus(mapLength)
 				log.Println("game start")
@@ -253,7 +265,7 @@ func (game *Game) BroadcastLoop() {
 		}
 		// log.Print("healpack: ")
 		// log.Println(healPackList)
-		(*game.socket).Broadcast(data)
+		game.broadcast(data)
 	}
 }
 
@@ -282,4 +294,16 @@ func (game *Game) handleMessage(clientId string, data []byte) {
 	if createBullet := wrapper.GetCreateBullet(); createBullet != nil {
 		game.state.CreateBullet(clientId, createBullet)
 	}
+}
+
+func (game *Game) broadcast(data []byte) {
+	game.clientsMu.Lock()
+	for id, client := range game.clients {
+		if err := client.write(data); err != nil {
+			log.Printf("Failed to send message to client %s: %v", id, err)
+			client.close()
+			delete(game.clients, id)
+		}
+	}
+	game.clientsMu.Unlock()
 }
