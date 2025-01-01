@@ -1,7 +1,6 @@
 package object
 
 import (
-	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/object/physical"
 	"math"
@@ -105,7 +104,10 @@ func (player *Player) CalcGameTick() {
 		if player.isDashing {
 			player.dashCoolTime--
 			if player.dashCoolTime == 0 {
+				player.mu.Lock()
 				player.isDashing = false
+				player.speed = PLAYER_SPEED
+				player.mu.Unlock()
 			}
 		}
 	}
@@ -202,14 +204,8 @@ func (player *Player) DoDash() {
 		player.mu.Lock()
 		player.isDashing = true
 		player.speed = DASH_SPEED
+		player.dashCoolTime = DASH_COOLTIME
 		player.mu.Unlock()
-		time.AfterFunc(cons.CalcLoopInterval*DASH_TICK*time.Millisecond, func() {
-			player.mu.Lock()
-			player.isDashing = false
-			player.speed = PLAYER_SPEED
-			player.dashCoolTime = DASH_COOLTIME
-			player.mu.Unlock()
-		})
 	}
 }
 
