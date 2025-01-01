@@ -9,7 +9,7 @@ import (
 )
 
 const PLAYER_SPEED = 0.3
-const DASH_SPEED = 1.2
+const DASH_SPEED = 0.6
 const DASH_TICK = 5
 const DASH_COOLTIME = 60 // 1sec
 const PLAYER_RADIOUS = 0.5
@@ -64,6 +64,7 @@ type Player struct {
 	speed          float32
 	isMoveing      bool
 	isDashing      bool
+	dashTime       int
 	dashCoolTime   int
 	health         int
 	MagicType      int
@@ -85,6 +86,7 @@ func NewPlayer(id string, x float32, y float32) *Player {
 		false,
 		false,
 		0,
+		0,
 		100,
 		BULLET_NONE,
 		NewPlayerDead("", id, DYING_NONE),
@@ -104,9 +106,12 @@ func (player *Player) CalcGameTick() {
 	if player.isMoveing {
 		player.physicalObject.Move(player.dx, player.dy)
 	}
-	if player.isDashing {
+	if player.dashCoolTime > 0 {
 		player.dashCoolTime--
-		if player.dashCoolTime == 0 {
+	}
+	if player.dashTime > 0 {
+		player.dashTime--
+		if player.dashTime == 0 {
 			player.isDashing = false
 			player.speed = PLAYER_SPEED
 			player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
