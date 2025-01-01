@@ -19,14 +19,13 @@ const (
 )
 
 type State struct {
-	GameState  int
-	Tiles      *util.Map[int, *object.Tile]
-	Players    *util.Map[string, *object.Player]
-	PlayerDead *util.Map[string, *object.PlayerDead]
-	Bullets    *util.Map[string, *object.Bullet]
-	HealPacks  *util.Map[string, *object.HealPack]
-	MagicItems *util.Map[string, *object.Magic]
-	// MapBoundary  *physical.Rectangle
+	GameState    int
+	Tiles        *util.Map[int, *object.Tile]
+	Players      *util.Map[string, *object.Player]
+	PlayerDead   *util.Map[string, *object.PlayerDead]
+	Bullets      *util.Map[string, *object.Bullet]
+	HealPacks    *util.Map[string, *object.HealPack]
+	MagicItems   *util.Map[string, *object.Magic]
 	FallenTime   int
 	MaxCoord     float32
 	LastGameTick int
@@ -60,9 +59,8 @@ func randomShuffle(n int) []int {
 
 func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	state.MaxCoord = float32(chunkNum * cons.CHUNK_LENGTH)
-	// state.MapBoundary = physical.NewRectangle(0, 0, state.MaxCoord, state.MaxCoord)
 
-	state.LastGameTick = playingTime * 60
+	state.LastGameTick = playingTime * 1000 / 16
 
 	// map tile setting
 	tileIdx := 0
@@ -78,7 +76,7 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	}
 
 	// nonfallen tile setting
-	state.FallenTime = (playingTime * 60) / (chunkNum * chunkNum)
+	state.FallenTime = (state.LastGameTick - (cons.TILE_FALL_ALERT_TIME)) / (chunkNum * chunkNum)
 }
 
 func (state *State) AddPlayer(id string, x float32, y float32) {
@@ -108,6 +106,12 @@ func (state *State) AddBullet(x float32, y float32, clientId string, BulletCreat
 func (state *State) ChangeDirection(clientId string, msg *message.ChangeDir) {
 	if player, exists := state.Players.Get(clientId); exists {
 		(*player).DirChange(float64(msg.GetAngle()), msg.IsMoved)
+	}
+}
+
+func (state *State) ChangeAngle(clientId string, msg *message.ChangeAngle) {
+	if player, exists := state.Players.Get(clientId); exists {
+		(*player).AngleChange(msg.GetAngle())
 	}
 }
 

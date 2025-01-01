@@ -25,7 +25,7 @@ type GameManager struct {
 
 // add game
 
-func NewgameManager() *GameManager {
+func NewGameManager() *GameManager {
 	socket := GameManager{
 		make(map[GameId]*Room),
 		sync.Mutex{},
@@ -110,19 +110,13 @@ func (socket *GameManager) Listen() {
 	}
 }
 
-func (gameManager *GameManager) RegisterRoom(
+func (gameManager *GameManager) CreateRoom(
 	roomId GameId,
-	room *Room,
+	minPlayerNum int,
+	playingTime int,
 ) {
-	gameManager.roomsMu.Lock()
-	gameManager.rooms[roomId] = room
-	gameManager.roomsMu.Unlock()
-	log.Printf("room: %d", len(gameManager.rooms))
-}
-
-func (gameManager *GameManager) CreateRoom(roomId GameId, room *Room) {
 	// gameManager := game.NewgameManager()
-	var newRoom Room = NewGame(100, 200).SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
+	var newRoom Room = NewGame(minPlayerNum, playingTime).SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
 	gameManager.roomsMu.Lock()
 	gameManager.rooms[roomId] = &newRoom
 	gameManager.roomsMu.Unlock()

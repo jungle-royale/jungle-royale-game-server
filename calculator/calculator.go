@@ -2,9 +2,11 @@ package calculator
 
 import (
 	"jungle-royale/chunk"
+	"jungle-royale/cons"
 	"jungle-royale/object"
 	"jungle-royale/object/physical"
 	"jungle-royale/state"
+	"time"
 )
 
 type Calculator struct {
@@ -64,17 +66,6 @@ func (calculator *Calculator) CalcGameTickState() {
 			return true
 		})
 
-		// // map boundary
-		// if !calculator.state.MapBoundary.IsInRectangle(
-		// 	(*player.GetPhysical()).GetX(), (*player.GetPhysical()).GetY()) {
-		// 	if calculator.state.GameState == state.Playing {
-		// 		calculator.state.Players.Delete(playerId)
-		// 		player.DyingStatus.Killer = ""
-		// 		player.DyingStatus.DyingStatus = object.DYING_FALL
-		// 		calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
-		// 	}
-		// }
-
 		// check player is on tile
 		if calculator.state.GameState == state.Playing {
 			onTile := false
@@ -104,7 +95,9 @@ func (calculator *Calculator) CalcGameTickState() {
 		calculator.state.Players.Range(func(key string, player *object.Player) bool {
 			if calculator.IsCollider(bullet, player) {
 				calculator.state.Bullets.Delete(bulletId)
-				player.HeatedBullet(bullet)
+				if calculator.state.GameState == state.Playing {
+					player.HeatedBullet(bullet)
+				}
 			}
 			return true
 		})
@@ -115,12 +108,20 @@ func (calculator *Calculator) CalcGameTickState() {
 		return true
 	})
 
-	// tile fall
 	if calculator.state.GameState == state.Playing {
-		if calculator.state.LastGameTick%calculator.state.FallenTime == 0 {
-			calculator.state.Tiles.PopRandom()
+		// tile fall
+		if calculator.state.LastGameTick%calculator.state.FallenTime == cons.TILE_FALL_ALERT_TIME {
+			tileId, stile, _ := calculator.state.Tiles.SelectRandom(func(t *object.Tile) bool {
+				return t.TileState == object.TILE_NORMAL
+			})
+			stile.SetTileState(object.TILE_DANGEROUS)
+			ticker := time.NewTicker(cons.TILE_FALL_ALERT_TIME * time.Second)
+			defer ticker.Stop()
+			for range ticker.C {
+				calculator.state.Tiles.Delete(tileId)
+			}
 		}
-		calculator.state.GameState--
+		calculator.state.LastGameTick--
 	}
 }
 

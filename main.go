@@ -4,6 +4,7 @@ import (
 	"jungle-royale/game"
 	"log"
 	"runtime"
+	"time"
 )
 
 func main() {
@@ -13,7 +14,12 @@ func main() {
 
 	runtime.GOMAXPROCS(2)
 
-	gameManager := game.NewgameManager()
+	gameManager := game.NewGameManager()
+
+	go func() {
+		time.Sleep(1000 * time.Millisecond) // 3초
+		gameManager.CreateRoom("test", 10, 200)
+	}()
 
 	gameManager.Listen()
 }
