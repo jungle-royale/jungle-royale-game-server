@@ -59,6 +59,7 @@ type Player struct {
 	id             string
 	dx             float32
 	dy             float32
+	dir            float64
 	angle          float32 // degree
 	speed          float32
 	isMoveing      bool
@@ -76,6 +77,7 @@ func NewPlayer(id string, x float32, y float32) *Player {
 	return &Player{
 		sync.Mutex{},
 		id,
+		0,
 		0,
 		0,
 		0,
@@ -107,6 +109,8 @@ func (player *Player) CalcGameTick() {
 				player.mu.Lock()
 				player.isDashing = false
 				player.speed = PLAYER_SPEED
+				player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
+				player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
 				player.mu.Unlock()
 			}
 		}
@@ -120,6 +124,7 @@ func (player *Player) IsValid() bool {
 
 func (player *Player) DirChange(angle float64, isMoved bool) {
 	player.mu.Lock()
+	player.dir = angle
 	player.dx = player.speed * float32(math.Sin(angle*(math.Pi/180)))
 	player.dy = player.speed * float32(math.Cos(angle*(math.Pi/180))) * -1
 	player.isMoveing = isMoved
@@ -204,6 +209,8 @@ func (player *Player) DoDash() {
 		player.mu.Lock()
 		player.isDashing = true
 		player.speed = DASH_SPEED
+		player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
+		player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
 		player.dashCoolTime = DASH_COOLTIME
 		player.mu.Unlock()
 	}
