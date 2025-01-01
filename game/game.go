@@ -24,7 +24,7 @@ type Game struct {
 	socket       *network.Socket
 }
 
-// playing time - second
+// playing time - sec
 func NewGame(socket *network.Socket, minPlayerNum int, playingTime int) *Game {
 	gameState := state.NewState()
 	game := &Game{

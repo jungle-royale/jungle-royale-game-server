@@ -95,16 +95,25 @@ func (m *Map[Key, Value]) Range(f func(Key, Value) bool) {
 }
 
 // KeyList: 모든 키를 슬라이스로 반환
-func (m *Map[Key, Value]) KeyList() []Key {
+func (m *Map[Key, Value]) KeyList(f func(Value) bool) []Key {
+	if f == nil {
+		f = func(v Value) bool {
+			return true
+		}
+	}
 	keys := []Key{}
 	if m.sync {
-		m.internal_sync_map.Range(func(key, _ any) bool {
-			keys = append(keys, key.(Key)) // 타입 단언 필요
+		m.internal_sync_map.Range(func(key, value any) bool {
+			if f(value.(Value)) {
+				keys = append(keys, key.(Key)) // 타입 단언 필요
+			}
 			return true
 		})
 	} else {
-		for k := range m.internal_map {
-			keys = append(keys, k)
+		for k, v := range m.internal_map {
+			if f(v) {
+				keys = append(keys, k)
+			}
 		}
 	}
 	return keys
@@ -126,13 +135,13 @@ func (m *Map[Key, Value]) ValueList() []Value {
 	return values
 }
 
-// PopRandom: 무작위로 한 element를 뽑아서 삭제 후 (키, 값, 성공여부)를 반환
-func (m *Map[Key, Value]) PopRandom() (Key, Value, bool) {
+// PopRandom: 조건을 만족하는 element 중 무작위로 한 element를 뽑아서 삭제 후 (키, 값, 성공여부)를 반환
+func (m *Map[Key, Value]) SelectRandom(f func(Value) bool) (Key, Value, bool) {
 	var zeroKey Key
 	var zeroVal Value
 
 	// 모든 키 목록을 가져옴
-	keys := m.KeyList()
+	keys := m.KeyList(f)
 	if len(keys) == 0 {
 		// 맵이 비어있으면 false 반환
 		return zeroKey, zeroVal, false
@@ -147,9 +156,6 @@ func (m *Map[Key, Value]) PopRandom() (Key, Value, bool) {
 	if !ok {
 		return zeroKey, zeroVal, false
 	}
-
-	// 맵에서 삭제
-	m.Delete(chosenKey)
 
 	return chosenKey, *valPtr, true
 }
