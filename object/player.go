@@ -59,7 +59,7 @@ type Player struct {
 	id             string
 	dx             float32
 	dy             float32
-	dir            float64
+	dir            float64 // (dx, dy)
 	angle          float32 // degree
 	speed          float32
 	isMoveing      bool
@@ -103,16 +103,14 @@ func (player *Player) CalcGameTick() {
 	player.mu.Lock()
 	if player.isMoveing {
 		player.physicalObject.Move(player.dx, player.dy)
-		if player.isDashing {
-			player.dashCoolTime--
-			if player.dashCoolTime == 0 {
-				player.mu.Lock()
-				player.isDashing = false
-				player.speed = PLAYER_SPEED
-				player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
-				player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
-				player.mu.Unlock()
-			}
+	}
+	if player.isDashing {
+		player.dashCoolTime--
+		if player.dashCoolTime == 0 {
+			player.isDashing = false
+			player.speed = PLAYER_SPEED
+			player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
+			player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
 		}
 	}
 	player.mu.Unlock()
