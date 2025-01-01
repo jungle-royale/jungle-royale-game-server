@@ -29,6 +29,8 @@ type PlayerDead struct {
 	Killer      string
 	dead        string
 	DyingStatus int
+	KillNum     int
+	Placement   int
 }
 
 func NewPlayerDead(killer string, dead string, ds int) *PlayerDead {
@@ -36,7 +38,13 @@ func NewPlayerDead(killer string, dead string, ds int) *PlayerDead {
 		killer,
 		dead,
 		ds,
+		0,
+		-1,
 	}
+}
+
+func (pd *PlayerDead) Kill() {
+	pd.KillNum++
 }
 
 func (pd *PlayerDead) MakeSendingData() *message.PlayerDeadState {
@@ -166,6 +174,12 @@ func (player *Player) HeatedBullet(bullet *Bullet) {
 			count--
 		}
 	}
+}
+
+func (player *Player) Dead(killer string, dyingStatus int, placement int) {
+	player.DyingStatus.Killer = killer
+	player.DyingStatus.DyingStatus = dyingStatus
+	player.DyingStatus.Placement = placement
 }
 
 func (player *Player) GetHealPack() {

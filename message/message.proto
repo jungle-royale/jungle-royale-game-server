@@ -96,6 +96,9 @@ message PlayerDeadState {
     // 2: stone
     // 3: fire
     // 4: fall
+
+    int32 killNum = 4;
+    int32 Placement = 5;
 }
 
 message TileState {
