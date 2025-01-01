@@ -113,6 +113,7 @@ func (player *Player) CalcGameTick() {
 		player.dashTime--
 		if player.dashTime == 0 {
 			player.isDashing = false
+			player.dashCoolTime = DASH_COOLTIME
 			player.speed = PLAYER_SPEED
 			player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
 			player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
@@ -214,7 +215,7 @@ func (player *Player) DoDash() {
 		player.speed = DASH_SPEED
 		player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
 		player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
-		player.dashCoolTime = DASH_COOLTIME
+		player.dashTime = DASH_TICK
 		player.mu.Unlock()
 	}
 }
