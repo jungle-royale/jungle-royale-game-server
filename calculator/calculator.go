@@ -45,8 +45,12 @@ func (calculator *Calculator) CalcGameTickState() {
 	// player
 	calculator.state.Players.Range(func(playerId string, player *object.Player) bool {
 		if !player.IsValid() {
+			player.DyingStatus.Placement = calculator.state.Players.Length()
 			calculator.state.Players.Delete(playerId)
 			calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
+			if killer, ok := calculator.state.Players.Get(player.DyingStatus.Killer); ok {
+				(*killer).DyingStatus.Kill()
+			}
 			return true
 		}
 		player.CalcGameTick()
@@ -79,9 +83,8 @@ func (calculator *Calculator) CalcGameTickState() {
 				return true
 			})
 			if !onTile {
+				player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
 				calculator.state.Players.Delete(playerId)
-				player.DyingStatus.Killer = ""
-				player.DyingStatus.DyingStatus = object.DYING_FALL
 				calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
 			}
 		}

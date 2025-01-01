@@ -26,6 +26,20 @@ func NewSyncMap[Key comparable, Value any]() *Map[Key, Value] {
 	}
 }
 
+// Length: map 크기 반환
+func (m *Map[Key, Value]) Length() int {
+	if m.sync {
+		len := 0
+		m.internal_sync_map.Range(func(key, value any) bool {
+			len++
+			return true
+		})
+		return len
+	} else {
+		return len(m.internal_map)
+	}
+}
+
 // Get: 키에 해당하는 값을 반환
 func (m *Map[Key, Value]) Get(key Key) (*Value, bool) {
 	if m.sync {
