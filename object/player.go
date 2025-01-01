@@ -50,7 +50,9 @@ func (pd *PlayerDead) MakeSendingData() *message.PlayerDeadState {
 type Player struct {
 	mu             sync.Mutex
 	id             string
-	angle          float64 // degree
+	dx             float32
+	dy             float32
+	angle          float32 // degree
 	speed          float32
 	isMoveing      bool
 	isDashing      bool
@@ -67,6 +69,8 @@ func NewPlayer(id string, x float32, y float32) *Player {
 	return &Player{
 		sync.Mutex{},
 		id,
+		0,
+		0,
 		0,
 		PLAYER_SPEED,
 		false,
@@ -89,11 +93,12 @@ func (player *Player) SetLocation(x float32, y float32) {
 func (player *Player) CalcGameTick() {
 	player.mu.Lock()
 	if player.isMoveing {
-		dx := player.speed * float32(math.Sin(player.angle*(math.Pi/180)))
-		dy := player.speed * float32(math.Cos(player.angle*(math.Pi/180))) * -1
-		player.physicalObject.Move(dx, dy)
+		player.physicalObject.Move(player.dx, player.dy)
 		if player.isDashing {
 			player.dashCoolTime--
+			if player.dashCoolTime == 0 {
+				player.isDashing = false
+			}
 		}
 	}
 	player.mu.Unlock()
@@ -105,9 +110,14 @@ func (player *Player) IsValid() bool {
 
 func (player *Player) DirChange(angle float64, isMoved bool) {
 	player.mu.Lock()
-	player.angle = angle
+	player.dx = player.speed * float32(math.Sin(angle*(math.Pi/180)))
+	player.dy = player.speed * float32(math.Cos(angle*(math.Pi/180))) * -1
 	player.isMoveing = isMoved
 	player.mu.Unlock()
+}
+
+func (player *Player) AngleChange(angle float32) {
+	player.angle = angle
 }
 
 func (player *Player) MakeSendingData() *message.PlayerState {
@@ -174,7 +184,7 @@ func (player *Player) GetMagic(magicType int) {
 }
 
 func (player *Player) DoDash() {
-	if !player.isDashing && player.dashCoolTime < 0 {
+	if !player.isDashing && player.dashCoolTime == 0 {
 		player.mu.Lock()
 		player.isDashing = true
 		player.speed = DASH_SPEED

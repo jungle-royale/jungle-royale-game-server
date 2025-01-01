@@ -268,10 +268,14 @@ func (game *Game) handleMessage(clientId string, data []byte) {
 		log.Printf("Failed to unmarshal message from client %s: %v", clientId, err)
 		return
 	}
-	// log.Printf(wrapper.String())
+
+	if changeAngle := wrapper.GetChangeAngle(); changeAngle != nil {
+		game.state.ChangeAngle(clientId, changeAngle)
+	}
+
 	// dirChange message
-	if dirChange := wrapper.GetChangeDir(); dirChange != nil {
-		game.state.ChangeDirection(clientId, dirChange)
+	if changeDir := wrapper.GetChangeDir(); changeDir != nil {
+		game.state.ChangeDirection(clientId, changeDir)
 	}
 
 	if doDash := wrapper.GetDoDash(); doDash != nil {
