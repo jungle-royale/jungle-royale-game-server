@@ -9,9 +9,9 @@ type ClientMessage struct {
 
 func NewClientMessage(
 	messageType int,
-	roomId GameId,
+	gameId GameId,
 	clientId ClientId,
 	data []byte,
 ) *ClientMessage {
-	return &ClientMessage{messageType, roomId, clientId, data}
+	return &ClientMessage{messageType, gameId, clientId, data}
 }

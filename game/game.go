@@ -23,12 +23,16 @@ type Game struct {
 	calculator   *calculator.Calculator
 	clients      map[ClientId]*Client
 	clientsMu    sync.Mutex
+	startHandler func()
+	endHandler   func()
 }
 
 // playing time - second
 func NewGame(
 	minPlayerNum int,
 	playingTime int,
+	startHandler func(),
+	endHandler func(),
 ) *Game {
 	// playing time - sec
 	gameState := state.NewState()
@@ -40,6 +44,8 @@ func NewGame(
 		calculator:   calculator.NewCalculator(gameState),
 		clients:      make(map[ClientId]*Client),
 		clientsMu:    sync.Mutex{},
+		startHandler: startHandler,
+		endHandler:   endHandler,
 	}
 	return game
 }
@@ -100,7 +106,9 @@ func (game *Game) OnClient(client *Client) {
 	if game.state.GameState == state.Waiting {
 		game.playerNum++
 		game.SetPlayer(client)
+		game.clientsMu.Lock()
 		game.clients[client.ID] = client
+		game.clientsMu.Unlock()
 	}
 }
 
@@ -194,6 +202,8 @@ func (game *Game) CalcSecLoop() {
 					return
 				}
 
+				game.startHandler()
+
 				game.broadcast(gameStart)
 
 				game.SetPlayingStatus(mapLength)
@@ -273,6 +283,15 @@ func (game *Game) BroadcastLoop() {
 // Room Interface
 func (game *Game) OnMessage(data []byte, id string) {
 	game.handleMessage(id, data)
+}
+
+func (game *Game) OnClose(client *Client) {
+	game.clientsMu.Lock()
+	delete(game.clients, client.ID)
+	game.clientsMu.Unlock()
+	if len(game.clients) == 0 {
+		game.endHandler()
+	}
 }
 
 func (game *Game) handleMessage(clientId string, data []byte) {

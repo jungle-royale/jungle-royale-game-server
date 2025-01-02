@@ -12,17 +12,17 @@ type ClientId string
 type Client struct {
 	mu     sync.Mutex
 	ID     ClientId
-	RoomID GameId
+	GameID GameId
 	conn   *websocket.Conn
 	connMu sync.Mutex
 }
 
-func NewClient(roomId GameId, conn *websocket.Conn) *Client {
+func NewClient(gameId GameId, conn *websocket.Conn) *Client {
 	id := uuid.New().String()
 	return &Client{
 		sync.Mutex{},
 		ClientId(id),
-		roomId,
+		gameId,
 		conn,
 		sync.Mutex{},
 	}
