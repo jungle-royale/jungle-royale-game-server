@@ -16,15 +16,15 @@ import (
 )
 
 type Game struct {
-	minPlayerNum int
-	playingTime  int
-	playerNum    int
-	state        *state.State
-	calculator   *calculator.Calculator
-	clients      map[ClientId]*Client
-	clientsMu    sync.Mutex
-	startHandler func()
-	endHandler   func()
+	minPlayerNum   int
+	playingTime    int
+	playerNum      int
+	state          *state.State
+	calculator     *calculator.Calculator
+	clients        map[ClientId]*Client
+	clientsMu      sync.Mutex
+	alertGameStart func() // 게임 시작을 알림
+	alertGameEnd   func() // 게임 종료를 알림
 }
 
 // playing time - second
@@ -37,15 +37,15 @@ func NewGame(
 	// playing time - sec
 	gameState := state.NewState()
 	game := &Game{
-		minPlayerNum: minPlayerNum,
-		playingTime:  playingTime,
-		playerNum:    0,
-		state:        gameState,
-		calculator:   calculator.NewCalculator(gameState),
-		clients:      make(map[ClientId]*Client),
-		clientsMu:    sync.Mutex{},
-		startHandler: startHandler,
-		endHandler:   endHandler,
+		minPlayerNum:   minPlayerNum,
+		playingTime:    playingTime,
+		playerNum:      0,
+		state:          gameState,
+		calculator:     calculator.NewCalculator(gameState),
+		clients:        make(map[ClientId]*Client),
+		clientsMu:      sync.Mutex{},
+		alertGameStart: startHandler,
+		alertGameEnd:   endHandler,
 	}
 	return game
 }
@@ -202,7 +202,7 @@ func (game *Game) CalcSecLoop() {
 					return
 				}
 
-				game.startHandler()
+				game.alertGameStart()
 
 				game.broadcast(gameStart)
 
@@ -290,7 +290,7 @@ func (game *Game) OnClose(client *Client) {
 	delete(game.clients, client.ID)
 	game.clientsMu.Unlock()
 	if len(game.clients) == 0 {
-		game.endHandler()
+		game.alertGameEnd()
 	}
 }
 

@@ -2,7 +2,7 @@ package game
 
 type ClientMessage struct {
 	MessageType int
-	RoomId      GameId
+	GameId      GameId
 	ClientId    ClientId
 	Data        []byte
 }
