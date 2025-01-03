@@ -69,6 +69,7 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 
 	// nonfallen tile setting
 	state.FallenTime = (state.LastGameTick - (cons.TILE_FALL_ALERT_TIME)) / (chunkNum * chunkNum)
+	// log.Println(state.FallenTime)
 }
 
 func (state *State) AddPlayer(id string, x float32, y float32) {

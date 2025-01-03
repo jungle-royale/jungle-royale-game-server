@@ -166,7 +166,7 @@ func (calculator *Calculator) CalcGameTickState() {
 
 	if calculator.state.GameState == state.Playing {
 		// tile fall
-		if calculator.state.LastGameTick%calculator.state.FallenTime == cons.TILE_FALL_ALERT_TIME {
+		if calculator.state.LastGameTick%calculator.state.FallenTime == cons.TILE_FALL_ALERT_TIME%calculator.state.FallenTime {
 			if tile, ok := calculator.LeafTileSet.SelectRandom(func(t *object.Tile) bool { return true }); ok {
 				calculator.LeafTileSet.Remove(tile)
 				tile.SetTileState(object.TILE_DANGEROUS)
