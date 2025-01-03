@@ -160,6 +160,9 @@ func (gameManager *GameManager) Test() {
 }
 
 func (gameManager *GameManager) sendStartMessage(gameId GameId) {
+	if gameManager.debug {
+		return
+	}
 	url := "http://wep-api.eternalsnowman.com"
 	if gameManager.debug {
 		url = "http://localhost:8080"
@@ -186,6 +189,9 @@ func (gameManager *GameManager) sendStartMessage(gameId GameId) {
 }
 
 func (gameManager *GameManager) sendEndMessage(gameId GameId) {
+	if gameManager.debug {
+		return
+	}
 	url := "http://wep-api.eternalsnowman.com"
 	if gameManager.debug {
 		url = "http://localhost:8080"
