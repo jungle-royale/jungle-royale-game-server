@@ -1,5 +1,5 @@
 package network
 
 type EndMessageRequest struct {
-	RoomID string `json:"roomId"`
+	GameID string `json:"roomId"`
 }

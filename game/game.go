@@ -6,10 +6,10 @@ import (
 	"jungle-royale/message"
 	"jungle-royale/object"
 	"jungle-royale/state"
+	"jungle-royale/util"
 	"log"
 	"math"
 	"math/rand"
-	"sync"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -21,8 +21,7 @@ type Game struct {
 	playerNum      int
 	state          *state.State
 	calculator     *calculator.Calculator
-	clients        map[ClientId]*Client
-	clientsMu      sync.Mutex
+	clients        *util.Map[ClientId, *Client]
 	alertGameStart func() // 게임 시작을 알림
 	alertGameEnd   func() // 게임 종료를 알림
 }
@@ -42,8 +41,7 @@ func NewGame(
 		playerNum:      0,
 		state:          gameState,
 		calculator:     calculator.NewCalculator(gameState),
-		clients:        make(map[ClientId]*Client),
-		clientsMu:      sync.Mutex{},
+		clients:        util.NewSyncMap[ClientId, *Client](),
 		alertGameStart: startHandler,
 		alertGameEnd:   endHandler,
 	}
@@ -106,9 +104,7 @@ func (game *Game) OnClient(client *Client) {
 	if game.state.GameState == state.Waiting {
 		game.playerNum++
 		game.SetPlayer(client)
-		game.clientsMu.Lock()
-		game.clients[client.ID] = client
-		game.clientsMu.Unlock()
+		game.clients.Update(client.ID, client)
 	}
 }
 
@@ -286,10 +282,8 @@ func (game *Game) OnMessage(data []byte, id string) {
 }
 
 func (game *Game) OnClose(client *Client) {
-	game.clientsMu.Lock()
-	delete(game.clients, client.ID)
-	game.clientsMu.Unlock()
-	if len(game.clients) == 0 {
+	game.clients.Delete(client.ID)
+	if game.clients.Length() == 0 {
 		game.alertGameEnd()
 	}
 }
@@ -321,13 +315,12 @@ func (game *Game) handleMessage(clientId string, data []byte) {
 }
 
 func (game *Game) broadcast(data []byte) {
-	game.clientsMu.Lock()
-	for id, client := range game.clients {
+	game.clients.Range(func(id ClientId, client *Client) bool {
 		if err := client.write(data); err != nil {
 			log.Printf("Failed to send message to client %s: %v", id, err)
 			client.close()
-			delete(game.clients, id)
+			game.clients.Delete(id)
 		}
-	}
-	game.clientsMu.Unlock()
+		return true
+	})
 }

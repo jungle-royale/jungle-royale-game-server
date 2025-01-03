@@ -24,16 +24,20 @@ type GameManager struct {
 	clientChannel        chan *Client
 	clientMessageChannel chan *ClientMessage
 	clientCloseChannel   chan *Client
+	debug                bool // production, development 환경 체크
 }
 
 // add game
 
-func NewGameManager() *GameManager {
+func NewGameManager(
+	debug bool,
+) *GameManager {
 	socket := GameManager{
 		util.NewSyncMap[GameId, *Game](),
 		make(chan *Client, MaxClientCount),
 		make(chan *ClientMessage, MaxClientCount),
 		make(chan *Client, MaxClientCount),
+		debug,
 	}
 	return &socket
 }
@@ -59,11 +63,8 @@ func (gameManager *GameManager) Listen() {
 	}()
 
 	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		// start := time.Now()
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"status":200,"message":"Pong"}`)
-		// elapsed := time.Since(start)
-		// fmt.Printf("Request processed in %s\n", start.String())
 	})
 
 	http.HandleFunc("/api/create-game", func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +85,7 @@ func (gameManager *GameManager) Listen() {
 			return
 		}
 
-		gameManager.CreateGame(GameId(req.RoomID), req.MinPlayers, req.MaxPlayTime)
+		gameManager.CreateGame(GameId(req.GameID), req.MinPlayers, req.MaxPlayTime)
 
 		response := `{"success":true,"message":"Game room created successfully"}`
 		fmt.Fprintln(w, response)
@@ -103,7 +104,7 @@ func (gameManager *GameManager) Listen() {
 			log.Printf("Failed to upgrade to WebSocket: %v", err)
 			return
 		}
-		defer conn.Close() // close시 client 삭제 처리?
+		defer conn.Close()
 
 		gameId := r.URL.Query().Get("roomId")
 		if gameId == "" {
@@ -119,9 +120,16 @@ func (gameManager *GameManager) Listen() {
 		for {
 			messageType, data, err := conn.ReadMessage()
 			if err != nil {
-				log.Printf("Client %s disconnected: %v", newClient.ID, err)
+				if websocket.IsUnexpectedCloseError(
+					err,
+					websocket.CloseGoingAway,
+					websocket.CloseAbnormalClosure,
+				) {
+					log.Printf("Client %s disconnected unexpectedly: %v", newClient.ID, err)
+				} else {
+					log.Printf("Client %s disconnected: %v", newClient.ID, err)
+				}
 				gameManager.clientCloseChannel <- newClient
-				// fmt.Printf("client disconnect\n")
 				break
 			}
 
@@ -131,8 +139,18 @@ func (gameManager *GameManager) Listen() {
 
 	log.Printf("Server listened in port " + Port)
 
-	if err := http.ListenAndServe(":"+Port, nil); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	server := &http.Server{Addr: ":" + Port}
+	if err := server.ListenAndServe(); err != nil {
+
+		gameManager.games.Range(func(gi GameId, g *Game) bool {
+			g.clients.Range(func(ci ClientId, c *Client) bool {
+				c.close()
+				return true
+			})
+			return true
+		})
+
+		log.Printf("Server failed: %v", err)
 	}
 }
 
@@ -142,10 +160,14 @@ func (gameManager *GameManager) Test() {
 }
 
 func (gameManager *GameManager) sendStartMessage(gameId GameId) {
-	url := "http://localhost:8080/api/game/start"
+	url := "http://wep-api.eternalsnowman.com"
+	if gameManager.debug {
+		url = "http://localhost:8080"
+	}
+	url += "/api/game/start"
 
 	// 요청 데이터 생성
-	payload := network.StartMessageRequest{RoomID: string(gameId)}
+	payload := network.StartMessageRequest{GameID: string(gameId)}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Printf("Error encoding JSON: %v\n", err)
@@ -164,11 +186,15 @@ func (gameManager *GameManager) sendStartMessage(gameId GameId) {
 }
 
 func (gameManager *GameManager) sendEndMessage(gameId GameId) {
-	url := "http://localhost:8080/api/game/end"
+	url := "http://wep-api.eternalsnowman.com"
+	if gameManager.debug {
+		url = "http://localhost:8080"
+	}
+	url += "/api/game/end"
 
 	// 요청 데이터 생성
 	payload := network.EndMessageRequest{
-		RoomID: string(gameId),
+		GameID: string(gameId),
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {

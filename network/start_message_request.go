@@ -1,5 +1,5 @@
 package network
 
 type StartMessageRequest struct {
-	RoomID string `json:"roomId"`
+	GameID string `json:"roomId"`
 }
