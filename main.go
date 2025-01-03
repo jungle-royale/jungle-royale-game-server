@@ -18,7 +18,7 @@ func main() {
 
 	go func() {
 		time.Sleep(1000 * time.Millisecond) // 3초
-		gameManager.CreateRoom("test", 10, 200)
+		gameManager.CreateRoom("test", 4, 200)
 	}()
 
 	gameManager.Listen()
