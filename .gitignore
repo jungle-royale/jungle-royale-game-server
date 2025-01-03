@@ -39,6 +39,7 @@ Thumbs.db
 
 # client test ignore
 node_modules
+temp
 
 # test log
 log.txt

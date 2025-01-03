@@ -6,6 +6,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const PLAYER_SPEED = 0.07
@@ -14,6 +16,7 @@ const DASH_TICK = 10
 const DASH_COOLTIME = 20 // 0.33 sec
 const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
+const SHOOTING_COOLTIME = 6 // 0.1 sec
 
 // dying status
 const (
@@ -55,21 +58,23 @@ func (pd *PlayerDead) MakeSendingData() *message.PlayerDeadState {
 }
 
 type Player struct {
-	mu             sync.Mutex
-	id             string
-	dx             float32
-	dy             float32
-	dir            float64 // (dx, dy)
-	angle          float32 // degree
-	speed          float32
-	isMoveing      bool
-	isDashing      bool
-	dashTime       int
-	dashCoolTime   int
-	health         int
-	MagicType      int
-	DyingStatus    *PlayerDead
-	physicalObject physical.Physical
+	mu               sync.Mutex
+	id               string
+	dx               float32
+	dy               float32
+	dir              float64 // (dx, dy)
+	angle            float64 // degree
+	speed            float32
+	isMoveing        bool
+	isDashing        bool
+	dashTime         int
+	dashCoolTime     int
+	health           int
+	MagicType        int
+	DyingStatus      *PlayerDead
+	physicalObject   physical.Physical
+	IsShooting       bool
+	ShootingCoolTime int
 }
 
 func NewPlayer(id string, x float32, y float32) *Player {
@@ -90,7 +95,26 @@ func NewPlayer(id string, x float32, y float32) *Player {
 		BULLET_NONE,
 		NewPlayerDead("", id, DYING_NONE),
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
+		false,
+		0,
 	}
+}
+
+func (player *Player) CreateBullet() *Bullet {
+	if player.ShootingCoolTime > 0 {
+		return nil
+	} else {
+		player.ShootingCoolTime = SHOOTING_COOLTIME
+	}
+	newBullet := NewBullet(
+		uuid.New().String(),
+		player.id,
+		player.MagicType,
+		player.physicalObject.GetX(),
+		player.physicalObject.GetY(),
+		player.angle,
+	)
+	return newBullet
 }
 
 func (player *Player) SetLocation(x float32, y float32) {
@@ -117,6 +141,9 @@ func (player *Player) CalcGameTick() {
 			player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
 		}
 	}
+	if player.ShootingCoolTime > 0 {
+		player.ShootingCoolTime--
+	}
 	player.mu.Unlock()
 }
 
@@ -133,7 +160,7 @@ func (player *Player) DirChange(angle float64, isMoved bool) {
 	player.mu.Unlock()
 }
 
-func (player *Player) AngleChange(angle float32) {
+func (player *Player) AngleChange(angle float64) {
 	player.angle = angle
 }
 
