@@ -34,37 +34,50 @@ type ChunkIndex struct {
 	Y int
 }
 
-func (chunk *Chunk) getChunkIndex(x, y float32) ChunkIndex {
+func (chunk *Chunk) getChunkIndex(x, y float32) (ChunkIndex, bool) {
+	ret := true
 	if x < 0 {
 		x = 0
+		ret = false
 	}
 	if y < 0 {
 		y = 0
+		ret = false
 	}
 	ret_x := int(x) / cons.CHUNK_LENGTH
 	if chunk.chunkNum <= ret_x {
 		ret_x = chunk.chunkNum - 1
+		ret = false
 	}
 	ret_y := int(y) / cons.CHUNK_LENGTH
 	if chunk.chunkNum <= ret_y {
 		ret_y = chunk.chunkNum - 1
+		ret = false
 	}
-	return ChunkIndex{ret_x, ret_y}
+	return ChunkIndex{ret_x, ret_y}, ret
 }
 
 func (chunk *Chunk) getChunkIndexSet(obj physical.Physical) *util.Set[ChunkIndex] {
 	set := util.NewSet[ChunkIndex]()
 	switch p := obj.(type) {
 	case *physical.Circle:
-		set.Add(chunk.getChunkIndex(p.X+p.Radius, p.Y))
-		set.Add(chunk.getChunkIndex(p.X-p.Radius, p.Y))
-		set.Add(chunk.getChunkIndex(p.X, p.Y+p.Radius))
-		set.Add(chunk.getChunkIndex(p.X, p.Y-p.Radius))
+		coord, _ := chunk.getChunkIndex(p.X+p.Radius, p.Y+p.Radius)
+		set.Add(coord)
+		coord, _ = chunk.getChunkIndex(p.X+p.Radius, p.Y-p.Radius)
+		set.Add(coord)
+		coord, _ = chunk.getChunkIndex(p.X-p.Radius, p.Y+p.Radius)
+		set.Add(coord)
+		coord, _ = chunk.getChunkIndex(p.X-p.Radius, p.Y-p.Radius)
+		set.Add(coord)
 	case *physical.Rectangle:
-		set.Add(chunk.getChunkIndex(p.X, p.Y))
-		set.Add(chunk.getChunkIndex(p.X+p.Width, p.Y))
-		set.Add(chunk.getChunkIndex(p.X, p.Y+p.Length))
-		set.Add(chunk.getChunkIndex(p.X+p.Width, p.Y+p.Length))
+		coord, _ := chunk.getChunkIndex(p.X, p.Y)
+		set.Add(coord)
+		coord, _ = chunk.getChunkIndex(p.X+p.Width, p.Y)
+		set.Add(coord)
+		coord, _ = chunk.getChunkIndex(p.X, p.Y+p.Length)
+		set.Add(coord)
+		coord, _ = chunk.getChunkIndex(p.X+p.Width, p.Y+p.Length)
+		set.Add(coord)
 	}
 	return set
 }
