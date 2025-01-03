@@ -81,6 +81,11 @@ func (calculator *Calculator) CalcGameTickState() {
 				if healPack, ok := calculator.state.HealPacks.Get(s); ok {
 					if calculator.IsCollider(player, *healPack) {
 						calculator.state.HealPacks.Delete((*healPack).Id)
+						calculator.chunk.RemoveKey(
+							(*healPack).GetObjectId(),
+							object.OBJECT_HEALPACK,
+							calculator.chunk.getChunkIndexSet(*(*healPack).GetPhysical()),
+						)
 						player.GetHealPack()
 						return false
 					}
@@ -93,6 +98,11 @@ func (calculator *Calculator) CalcGameTickState() {
 				if magicItem, ok := calculator.state.MagicItems.Get(s); ok {
 					if calculator.IsCollider(player, *magicItem) {
 						calculator.state.MagicItems.Delete((*magicItem).ItemId)
+						calculator.chunk.RemoveKey(
+							(*magicItem).GetObjectId(),
+							object.OBJECT_HEALPACK,
+							calculator.chunk.getChunkIndexSet(*(*magicItem).GetPhysical()),
+						)
 						return false
 					}
 				}
@@ -103,24 +113,35 @@ func (calculator *Calculator) CalcGameTickState() {
 
 		// check player is on tile
 		if calculator.state.GameState == state.Playing {
-			onTile := false
-			for i := 0; i < calculator.chunk.chunkNum; i++ {
-				for j := 0; j < calculator.chunk.chunkNum; j++ {
-					tile := calculator.state.Tiles[i][j]
-					if tile.PhysicalObject.IsInRectangle(
-						(*player.GetPhysical()).GetX(),
-						(*player.GetPhysical()).GetY(),
-					) {
-						onTile = true
-					}
-					return true
-				}
-			}
-			if !onTile {
+
+			if playerChunkIdx, valid := calculator.GetChunk().getChunkIndex(
+				(*player.GetPhysical()).GetX(),
+				(*player.GetPhysical()).GetY(),
+			); !valid ||
+				calculator.state.Tiles[playerChunkIdx.X][playerChunkIdx.Y].TileState == object.TILE_FALL {
 				player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
 				calculator.state.Players.Delete(playerId)
 				calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
 			}
+
+			// onTile := false
+			// for i := 0; i < calculator.chunk.chunkNum; i++ {
+			// 	for j := 0; j < calculator.chunk.chunkNum; j++ {
+			// 		tile := calculator.state.Tiles[i][j]
+			// 		if tile.TileState != object.TILE_FALL && tile.PhysicalObject.IsInRectangle(
+			// 			(*player.GetPhysical()).GetX(),
+			// 			(*player.GetPhysical()).GetY(),
+			// 		) {
+			// 			onTile = true
+			// 		}
+			// 		return true
+			// 	}
+			// }
+			// if !onTile {
+			// 	player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
+			// 	calculator.state.Players.Delete(playerId)
+			// 	calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
+			// }
 		}
 
 		// create bullet
@@ -176,6 +197,19 @@ func (calculator *Calculator) CalcGameTickState() {
 				}
 				time.AfterFunc(cons.TILE_FALL_ALERT_TIME*time.Second, func() {
 					calculator.state.Tiles[tile.IdxI][tile.IdxJ].SetTileState(object.TILE_FALL)
+					onObjectList := calculator.chunk.GetChunkKeySet(tile.IdxI, tile.IdxJ)
+
+					// healPack
+					onObjectList[object.OBJECT_HEALPACK].Range(func(s string) bool {
+						calculator.state.HealPacks.Delete(s)
+						return true
+					})
+
+					// magicItem
+					onObjectList[object.OBJECT_MAGICITEM].Range(func(s string) bool {
+						calculator.state.MagicItems.Delete(s)
+						return true
+					})
 				})
 			}
 		}

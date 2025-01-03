@@ -124,8 +124,6 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 			game.calculator.LeafTileSet.Add(currentTile)
 		}
 	}
-	log.Printf("\n\n\n\n\n\n\n\n\n\nendFor\n\n\n\n\n\n\n\n\n\n")
-	// log.Println(*(game.calculator.LeafTileSet))
 
 	game.state.GameState = state.Playing
 
