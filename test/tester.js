@@ -38,4 +38,44 @@ module.exports = {
     // console.log("Sent Protobuf message:", message);
     done();
   },
+
+  upMessage: (context, events, done) => { 
+    const change = new message.ChangeDir();
+    change.setAngle(0)
+    change.setIsmoved(true)
+    wrapper.setChangedir(change)
+    const binaryData = wrapper.serializeBinary();
+    context.ws.send(binaryData);
+    done();
+  },
+
+  leftMessage: (context, events, done) => { 
+    const change = new message.ChangeDir();
+    change.setAngle(270)
+    change.setIsmoved(true)
+    wrapper.setChangedir(change)
+    const binaryData = wrapper.serializeBinary();
+    context.ws.send(binaryData);
+    done();
+  },
+
+  rightMessage: (context, events, done) => { 
+    const change = new message.ChangeDir();
+    change.setAngle(90)
+    change.setIsmoved(true)
+    wrapper.setChangedir(change)
+    const binaryData = wrapper.serializeBinary();
+    context.ws.send(binaryData);
+    done();
+  },
+
+  downMessage: (context, events, done) => { 
+    const change = new message.ChangeDir();
+    change.setAngle(180)
+    change.setIsmoved(true)
+    wrapper.setChangedir(change)
+    const binaryData = wrapper.serializeBinary();
+    context.ws.send(binaryData);
+    done();
+  }
 };
