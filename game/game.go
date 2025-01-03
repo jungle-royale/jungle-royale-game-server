@@ -287,6 +287,7 @@ func (game *Game) OnMessage(data []byte, id string) {
 func (game *Game) OnClose(client *Client) {
 	game.clients.Delete(client.ID)
 	if game.clients.Length() == 0 {
+		log.Print("clinets count zero")
 		game.alertGameEnd()
 	}
 }

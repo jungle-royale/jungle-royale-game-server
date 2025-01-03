@@ -112,8 +112,14 @@ func (gameManager *GameManager) Listen() {
 			return
 		}
 
-		log.Println("new client", gameId)
-		newClient := NewClient(GameId(gameId), conn)
+		serverClientId := r.URL.Query().Get("clientId")
+		if serverClientId == "" {
+			http.Error(w, "Missing serverClientId query parameter", http.StatusBadRequest)
+			return
+		}
+
+		log.Println("new client", gameId, serverClientId)
+		newClient := NewClient(GameId(gameId), serverClientId, conn)
 		gameManager.clientChannel <- newClient
 
 		log.Printf("Client %s connected", newClient.ID)
@@ -155,15 +161,7 @@ func (gameManager *GameManager) Listen() {
 	}
 }
 
-func (gameManager *GameManager) Test() {
-	gameManager.sendStartMessage("test")
-	gameManager.sendEndMessage("test")
-}
-
 func (gameManager *GameManager) sendStartMessage(gameId GameId) {
-	if gameManager.debug {
-		return
-	}
 	url := "http://wep-api.eternalsnowman.com"
 	if gameManager.debug {
 		url = "http://localhost:8080"
@@ -190,9 +188,6 @@ func (gameManager *GameManager) sendStartMessage(gameId GameId) {
 }
 
 func (gameManager *GameManager) sendEndMessage(gameId GameId) {
-	if gameManager.debug {
-		return
-	}
 	url := "http://wep-api.eternalsnowman.com"
 	if gameManager.debug {
 		url = "http://localhost:8080"
@@ -229,17 +224,31 @@ func (gameManager *GameManager) CreateGame(
 		minPlayerNum,
 		playingTime,
 		func() { // 게임 시작 (대기방에서 시작화면으로)
-			gameManager.sendStartMessage(gameId)
+			gameManager.handleGameStart(gameId)
 		},
 		func() { // 게임 종료
-			gameManager.games.Delete(gameId)
-			gameManager.sendEndMessage(gameId)
+			gameManager.handleGameEnd(gameId)
 		},
 	)
 	newGame.SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
 	gameManager.games.Store(gameId, newGame)
 	log.Printf("room count: %d", gameManager.games.Length())
+}
 
+func (gameManager *GameManager) handleGameStart(gameId GameId) {
+	if gameManager.debug {
+		return
+	}
+	gameManager.sendStartMessage(gameId)
+}
+
+func (gameManager *GameManager) handleGameEnd(gameId GameId) {
+	if gameManager.debug {
+		return
+	} else {
+		gameManager.games.Delete(gameId)
+		gameManager.sendEndMessage(gameId)
+	}
 }
 
 func (gameManager *GameManager) setClient(client *Client) {
