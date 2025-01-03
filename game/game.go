@@ -104,7 +104,7 @@ func (game *Game) OnClient(client *Client) {
 	if game.state.GameState == state.Waiting {
 		game.playerNum++
 		game.SetPlayer(client)
-		game.clients.Update(client.ID, client)
+		game.clients.Store(client.ID, client)
 	}
 }
 

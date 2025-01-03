@@ -230,14 +230,14 @@ func (gameManager *GameManager) CreateGame(
 		},
 	)
 	newGame.SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
-	gameManager.games.Update(gameId, newGame)
-	log.Printf("room: %d", gameManager.games.Length())
+	gameManager.games.Store(gameId, newGame)
+	log.Printf("room count: %d", gameManager.games.Length())
 }
 
 func (gameManager *GameManager) setClient(client *Client) {
 	room, exists := gameManager.games.Get(client.GameID)
 	if !exists || room == nil {
-		log.Printf("No Room: %s", client.GameID)
+		log.Printf("No Room client: %s", client.GameID)
 		return
 	}
 	(*room).OnClient(client)
@@ -248,7 +248,7 @@ func (gameManager *GameManager) handleClientMessage(clientMessage *ClientMessage
 	clientId := clientMessage.ClientId
 	room, exists := gameManager.games.Get(gameId)
 	if !exists || room == nil {
-		log.Printf("No Room: %s", gameId)
+		log.Printf("No Room clinet message: %s", gameId)
 		return
 	}
 	(*room).OnMessage(clientMessage.Data, string(clientId))
@@ -258,7 +258,7 @@ func (gameManager *GameManager) handleClientClose(client *Client) {
 	gameId := client.GameID
 	room, exists := gameManager.games.Get(gameId)
 	if !exists || room == nil {
-		log.Printf("No Room: %s", gameId)
+		log.Printf("No Room close: %s", gameId)
 		return
 	}
 	(*room).OnClose(client)
