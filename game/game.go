@@ -56,7 +56,6 @@ func (game *Game) SetReadyStatus() *Game {
 }
 
 func (game *Game) SetPlayingStatus(length int) *Game {
-	game.state.GameState = state.Playing
 
 	// map setting
 	game.state.ConfigureState(length, game.playingTime)
@@ -92,6 +91,44 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 		game.calculator.SetLocation(newFireItem, x, y)
 		game.state.MagicItems.Store(newFireItem.ItemId, newFireItem)
 	}
+
+	// tile fall setting
+	last_x_idx := rand.Intn(length)
+	last_y_idx := rand.Intn(length)
+	game.state.Tiles[last_x_idx][last_y_idx].ParentTile = game.state.Tiles[last_x_idx][last_y_idx]
+	tileTreeSet := util.NewSet[calculator.ChunkIndex]()
+	tileTreeSet.Add(calculator.ChunkIndex{X: last_x_idx, Y: last_y_idx})
+	dir := [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+	for tileTreeSet.Length() > 0 {
+		currentTileIdx, _ := tileTreeSet.SelectRandom(func(t calculator.ChunkIndex) bool { return true })
+		currentTile := game.state.Tiles[currentTileIdx.X][currentTileIdx.Y]
+		tileTreeSet.Remove(currentTileIdx)
+		hasChild := false
+		for i := 0; i < 4; i++ {
+			if 0 <= currentTileIdx.X+dir[i][0] &&
+				currentTileIdx.X+dir[i][0] < length &&
+				0 <= currentTileIdx.Y+dir[i][1] &&
+				currentTileIdx.Y+dir[i][1] < length &&
+				game.state.Tiles[currentTileIdx.X+dir[i][0]][currentTileIdx.Y+dir[i][1]].ParentTile == nil {
+				childTile := game.state.Tiles[currentTileIdx.X+dir[i][0]][currentTileIdx.Y+dir[i][1]]
+				tileTreeSet.Add(calculator.ChunkIndex{
+					X: currentTileIdx.X + dir[i][0],
+					Y: currentTileIdx.Y + dir[i][1],
+				})
+				currentTile.ChildTile.Add(childTile)
+				childTile.ParentTile = currentTile
+				hasChild = true
+			}
+		}
+		if !hasChild {
+			game.calculator.LeafTileSet.Add(currentTile)
+		}
+	}
+	// log.Println("endFor")
+	// log.Println(*(game.calculator.LeafTileSet))
+
+	game.state.GameState = state.Playing
+
 	return game
 }
 
@@ -184,9 +221,9 @@ func (game *Game) CalcSecLoop() {
 
 			gameStartCount--
 			if gameStartCount == 0 {
-				mapLength := game.playerNum / 10
-				if mapLength == 0 {
-					mapLength = 1
+				mapLength := int(math.Sqrt(float64(game.playerNum)))
+				if mapLength < 2 {
+					mapLength = 2
 				}
 				start := &message.GameStart{
 					MapLength: int32(mapLength * cons.CHUNK_LENGTH),
@@ -251,11 +288,14 @@ func (game *Game) BroadcastLoop() {
 		})
 
 		tileStateList := make([]*message.TileState, 0)
-		tileState := game.state.Tiles.ValueList()
-		for _, tile := range tileState {
-			tileStateList = append(tileStateList, tile.MakeSendingData())
+		for i := 0; i < game.state.ChunkNum; i++ {
+			for j := 0; j < game.state.ChunkNum; j++ {
+				if game.state.Tiles[i][j].TileState != object.TILE_FALL {
+					tileStateList = append(tileStateList, game.state.Tiles[i][j].MakeSendingData())
+				}
+			}
 		}
-		// log.Println(tileStateList)
+
 		gameState := &message.GameState{
 			PlayerState:     playerList,
 			BulletState:     bulletList,

@@ -6,7 +6,6 @@ import (
 	"jungle-royale/object"
 	"jungle-royale/util"
 	"math"
-	"math/rand"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +20,7 @@ const (
 type State struct {
 	GameState    int
 	ChunkNum     int
-	Tiles        *util.Map[string, *object.Tile]
+	Tiles        [][]*object.Tile
 	Players      *util.Map[string, *object.Player]
 	PlayerDead   *util.Map[string, *object.PlayerDead]
 	Bullets      *util.Map[string, *object.Bullet]
@@ -34,7 +33,6 @@ type State struct {
 
 func NewState() *State {
 	return &State{
-		Tiles:        util.NewSyncMap[string, *object.Tile](),
 		Players:      util.NewSyncMap[string, *object.Player](),
 		PlayerDead:   util.NewSyncMap[string, *object.PlayerDead](),
 		Bullets:      util.NewSyncMap[string, *object.Bullet](),
@@ -45,19 +43,6 @@ func NewState() *State {
 	}
 }
 
-func randomShuffle(n int) []int {
-	numbers := make([]int, n)
-	for i := 0; i < n; i++ {
-		numbers[i] = i
-	}
-	for i := n - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
-		numbers[i], numbers[j] = numbers[j], numbers[i]
-	}
-
-	return numbers
-}
-
 func (state *State) ConfigureState(chunkNum int, playingTime int) {
 
 	state.ChunkNum = chunkNum
@@ -66,15 +51,19 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	state.LastGameTick = playingTime * 1000 / 16
 
 	// map tile setting
+	state.Tiles = make([][]*object.Tile, chunkNum)
 	for i := 0; i < chunkNum; i++ {
+		state.Tiles[i] = make([]*object.Tile, chunkNum)
 		for j := 0; j < chunkNum; j++ {
-			// log.Println(i, j)
 			tildId := uuid.New().String()
-			state.Tiles.Store(tildId, object.NewTile(
+			newTile := object.NewTile(
 				tildId,
 				float32(i*cons.CHUNK_LENGTH),
 				float32(j*cons.CHUNK_LENGTH),
-			))
+				i,
+				j,
+			)
+			state.Tiles[i][j] = newTile
 		}
 	}
 

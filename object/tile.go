@@ -4,6 +4,7 @@ import (
 	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/object/physical"
+	"jungle-royale/util"
 )
 
 // tile state
@@ -14,13 +15,19 @@ const (
 )
 
 type Tile struct {
+	IdxI           int
+	IdxJ           int
 	TileId         string
 	TileState      int
 	PhysicalObject *physical.Rectangle
+	ChildTile      *util.Set[*Tile]
+	ParentTile     *Tile
 }
 
-func NewTile(tileId string, x, y float32) *Tile {
+func NewTile(tileId string, x, y float32, idxi, idxj int) *Tile {
 	return &Tile{
+		IdxI:      idxi,
+		IdxJ:      idxj,
 		TileId:    tileId,
 		TileState: TILE_NORMAL,
 		PhysicalObject: &physical.Rectangle{
@@ -29,6 +36,8 @@ func NewTile(tileId string, x, y float32) *Tile {
 			Width:  cons.CHUNK_LENGTH,
 			Length: cons.CHUNK_LENGTH,
 		},
+		ChildTile:  util.NewSet[*Tile](),
+		ParentTile: nil,
 	}
 }
 
