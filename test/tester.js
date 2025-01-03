@@ -41,6 +41,7 @@ module.exports = {
 
   upMessage: (context, events, done) => { 
     const change = new message.ChangeDir();
+    const wrapper = new message.Wrapper();
     change.setAngle(0)
     change.setIsmoved(true)
     wrapper.setChangedir(change)
@@ -51,6 +52,7 @@ module.exports = {
 
   leftMessage: (context, events, done) => { 
     const change = new message.ChangeDir();
+    const wrapper = new message.Wrapper();
     change.setAngle(270)
     change.setIsmoved(true)
     wrapper.setChangedir(change)
@@ -61,6 +63,7 @@ module.exports = {
 
   rightMessage: (context, events, done) => { 
     const change = new message.ChangeDir();
+    const wrapper = new message.Wrapper();
     change.setAngle(90)
     change.setIsmoved(true)
     wrapper.setChangedir(change)
@@ -71,6 +74,7 @@ module.exports = {
 
   downMessage: (context, events, done) => { 
     const change = new message.ChangeDir();
+    const wrapper = new message.Wrapper();
     change.setAngle(180)
     change.setIsmoved(true)
     wrapper.setChangedir(change)

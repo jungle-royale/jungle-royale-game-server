@@ -112,6 +112,7 @@ func (gameManager *GameManager) Listen() {
 			return
 		}
 
+		log.Println("new client", gameId)
 		newClient := NewClient(GameId(gameId), conn)
 		gameManager.clientChannel <- newClient
 
@@ -230,7 +231,7 @@ func (gameManager *GameManager) CreateGame(
 		},
 	)
 	newGame.SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
-	gameManager.games.Update(gameId, newGame)
+	gameManager.games.Store(gameId, newGame)
 	log.Printf("room: %d", gameManager.games.Length())
 }
 
