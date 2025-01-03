@@ -149,7 +149,6 @@ func (m *Map[Key, Value]) ValueList() []Value {
 	return values
 }
 
-// PopRandom: 조건을 만족하는 element 중 무작위로 한 element를 뽑아서 삭제 후 (키, 값, 성공여부)를 반환
 func (m *Map[Key, Value]) SelectRandom(f func(Value) bool) (Key, Value, bool) {
 	var zeroKey Key
 	var zeroVal Value

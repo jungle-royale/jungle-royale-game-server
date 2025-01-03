@@ -4,17 +4,20 @@ import (
 	"jungle-royale/cons"
 	"jungle-royale/object"
 	"jungle-royale/state"
+	"jungle-royale/util"
 	"time"
 )
 
 type Calculator struct {
-	chunk *Chunk
-	state *state.State
+	chunk       *Chunk
+	state       *state.State
+	LeafTileSet *util.Set[*object.Tile]
 }
 
 func NewCalculator(state *state.State) *Calculator {
 	return &Calculator{
-		state: state,
+		state:       state,
+		LeafTileSet: util.NewSet[*object.Tile](),
 	}
 }
 
@@ -101,15 +104,18 @@ func (calculator *Calculator) CalcGameTickState() {
 		// check player is on tile
 		if calculator.state.GameState == state.Playing {
 			onTile := false
-			calculator.state.Tiles.Range(func(key string, tile *object.Tile) bool {
-				if tile.PhysicalObject.IsInRectangle(
-					(*player.GetPhysical()).GetX(),
-					(*player.GetPhysical()).GetY(),
-				) {
-					onTile = true
+			for i := 0; i < calculator.chunk.chunkNum; i++ {
+				for j := 0; j < calculator.chunk.chunkNum; j++ {
+					tile := calculator.state.Tiles[i][j]
+					if tile.PhysicalObject.IsInRectangle(
+						(*player.GetPhysical()).GetX(),
+						(*player.GetPhysical()).GetY(),
+					) {
+						onTile = true
+					}
+					return true
 				}
-				return true
-			})
+			}
 			if !onTile {
 				player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
 				calculator.state.Players.Delete(playerId)
@@ -161,13 +167,17 @@ func (calculator *Calculator) CalcGameTickState() {
 	if calculator.state.GameState == state.Playing {
 		// tile fall
 		if calculator.state.LastGameTick%calculator.state.FallenTime == cons.TILE_FALL_ALERT_TIME {
-			tileId, stile, _ := calculator.state.Tiles.SelectRandom(func(t *object.Tile) bool {
-				return t.TileState == object.TILE_NORMAL
-			})
-			stile.SetTileState(object.TILE_DANGEROUS)
-			time.AfterFunc(cons.TILE_FALL_ALERT_TIME*time.Second, func() {
-				calculator.state.Tiles.Delete(tileId)
-			})
+			if tile, ok := calculator.LeafTileSet.SelectRandom(func(t *object.Tile) bool { return true }); ok {
+				calculator.LeafTileSet.Remove(tile)
+				tile.SetTileState(object.TILE_DANGEROUS)
+				tile.ParentTile.ChildTile.Remove(tile)
+				if tile.ParentTile.ChildTile.Length() == 0 && tile != tile.ParentTile {
+					calculator.LeafTileSet.Add(tile.ParentTile)
+				}
+				time.AfterFunc(cons.TILE_FALL_ALERT_TIME*time.Second, func() {
+					calculator.state.Tiles[tile.IdxI][tile.IdxJ].SetTileState(object.TILE_FALL)
+				})
+			}
 		}
 		calculator.state.LastGameTick--
 	}
