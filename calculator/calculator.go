@@ -95,7 +95,6 @@ func (calculator *Calculator) CalcGameTickState() {
 				}
 				return true
 			})
-
 			return true
 		})
 
@@ -117,6 +116,13 @@ func (calculator *Calculator) CalcGameTickState() {
 				calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
 			}
 		}
+
+		// create bullet
+		if player.IsShooting && player.ShootingCoolTime <= 0 {
+			newBullet := player.CreateBullet()
+			calculator.state.Bullets.Store(newBullet.GetObjectId(), newBullet)
+		}
+
 		return true
 	})
 

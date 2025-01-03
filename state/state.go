@@ -91,21 +91,6 @@ func (state *State) AddPlayer(id string, x float32, y float32) {
 	state.Players.Store(id, newPlayer)
 }
 
-func (state *State) AddBullet(x float32, y float32, clientId string, BulletCreateMessage *message.CreateBullet) {
-	bulletId := uuid.New().String()
-	if player, exists := state.Players.Get(clientId); exists {
-		newBullet := object.NewBullet(
-			uuid.New().String(),
-			clientId,
-			(*player).MagicType,
-			x,
-			y,
-			float64(BulletCreateMessage.Angle),
-		)
-		state.Bullets.Store(bulletId, newBullet)
-	}
-}
-
 func (state *State) ChangeDirection(clientId string, msg *message.ChangeDir) {
 	if player, exists := state.Players.Get(clientId); exists {
 		(*player).DirChange(float64(msg.GetAngle()), msg.IsMoved)
@@ -114,18 +99,18 @@ func (state *State) ChangeDirection(clientId string, msg *message.ChangeDir) {
 
 func (state *State) ChangeAngle(clientId string, msg *message.ChangeAngle) {
 	if player, exists := state.Players.Get(clientId); exists {
-		(*player).AngleChange(msg.GetAngle())
-	}
-}
-
-func (state *State) CreateBullet(clientId string, msg *message.CreateBullet) {
-	if player, exists := state.Players.Get(clientId); exists {
-		state.AddBullet((*(*player).GetPhysical()).GetX(), (*(*player).GetPhysical()).GetY(), clientId, msg)
+		(*player).AngleChange(float64(msg.GetAngle()))
 	}
 }
 
 func (state *State) DoDash(clientId string, msg *message.DoDash) {
 	if player, exists := state.Players.Get(clientId); exists {
 		(*player).DoDash()
+	}
+}
+
+func (state *State) ChangeBulletState(clientId string, msg *message.ChangeBulletState) {
+	if player, exists := state.Players.Get(clientId); exists {
+		(*player).IsShooting = msg.IsShooting
 	}
 }

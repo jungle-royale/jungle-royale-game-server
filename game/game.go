@@ -312,8 +312,8 @@ func (game *Game) handleMessage(clientId string, data []byte) {
 	}
 
 	// bulletCreate message
-	if createBullet := wrapper.GetCreateBullet(); createBullet != nil {
-		game.state.CreateBullet(clientId, createBullet)
+	if changeBulletState := wrapper.GetChangeBulletState(); changeBulletState != nil {
+		game.state.ChangeBulletState(clientId, changeBulletState)
 	}
 }
 

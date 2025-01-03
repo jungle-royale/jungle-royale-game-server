@@ -7,7 +7,7 @@ message Wrapper {
         ChangeAngle changeAngle = 1;
         ChangeDir changeDir = 2;
         DoDash doDash = 3;
-        CreateBullet createBullet = 4;
+        ChangeBulletState changeBulletState = 4;
         GameState gameState = 5;
         GameCount gameCount = 6;
         GameInit gameInit = 7;
@@ -50,8 +50,8 @@ message PlayerState {
     int32 dashCoolTime = 7;
 }
 
-message CreateBullet {
-    float angle = 1;
+message ChangeBulletState {
+    bool isShooting = 1;
 }
 
 message BulletState {
