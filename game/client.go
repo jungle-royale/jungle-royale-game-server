@@ -10,19 +10,25 @@ import (
 type ClientId string
 
 type Client struct {
-	mu     sync.Mutex
-	ID     ClientId
-	GameID GameId
-	conn   *websocket.Conn
-	connMu sync.Mutex
+	mu             sync.Mutex
+	ID             ClientId
+	GameID         GameId
+	serverClientId string
+	conn           *websocket.Conn
+	connMu         sync.Mutex
 }
 
-func NewClient(gameId GameId, conn *websocket.Conn) *Client {
+func NewClient(
+	gameId GameId,
+	serverClientId string,
+	conn *websocket.Conn,
+) *Client {
 	id := uuid.New().String()
 	return &Client{
 		sync.Mutex{},
 		ClientId(id),
 		gameId,
+		serverClientId,
 		conn,
 		sync.Mutex{},
 	}
