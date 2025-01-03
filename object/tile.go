@@ -14,12 +14,12 @@ const (
 )
 
 type Tile struct {
-	TileId         int
+	TileId         string
 	TileState      int
 	PhysicalObject *physical.Rectangle
 }
 
-func NewTile(tileId int, x, y float32) *Tile {
+func NewTile(tileId string, x, y float32) *Tile {
 	return &Tile{
 		TileId:    tileId,
 		TileState: TILE_NORMAL,
@@ -38,7 +38,7 @@ func (tile *Tile) SetTileState(tileState int) {
 
 func (tile *Tile) MakeSendingData() *message.TileState {
 	return &message.TileState{
-		TileId:    int32(tile.TileId),
+		TileId:    tile.TileId,
 		TileState: int32(tile.TileState),
 		X:         tile.PhysicalObject.X,
 		Y:         tile.PhysicalObject.Y,

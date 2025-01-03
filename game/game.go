@@ -61,14 +61,12 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	// map setting
 	game.state.ConfigureState(length, game.playingTime)
 	game.calculator.ConfigureCalculator(length)
-	// game.state.ConfigureState(4)
-	// game.calculator.ConfigureCalculator(4)
 
 	// player relocation
 	game.state.Players.Range(func(key string, player *object.Player) bool {
 		x := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
-		player.SetLocation(x, y)
+		game.calculator.ReLocation(player, x, y)
 		return true
 	})
 
@@ -77,6 +75,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 		x := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		newHealPack := object.NewHealPack(x, y)
+		game.calculator.SetLocation(newHealPack, x, y)
 		game.state.HealPacks.Store(newHealPack.Id, newHealPack)
 	}
 
@@ -85,8 +84,12 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 		x := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y := float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y)
-		newFireItem := object.NewMagicItem(object.FIRE_MAGIC, x, y)
+		game.calculator.SetLocation(newStoneItem, x, y)
 		game.state.MagicItems.Store(newStoneItem.ItemId, newStoneItem)
+		x = float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
+		y = float32(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
+		newFireItem := object.NewMagicItem(object.FIRE_MAGIC, x, y)
+		game.calculator.SetLocation(newFireItem, x, y)
 		game.state.MagicItems.Store(newFireItem.ItemId, newFireItem)
 	}
 	return game
@@ -215,6 +218,7 @@ func (game *Game) BroadcastLoop() {
 	defer ticker.Stop()
 
 	for range ticker.C { // broadcast loop
+
 		playerList := make([]*message.PlayerState, 0)
 		game.state.Players.Range(func(key string, player *object.Player) bool {
 			playerList = append(playerList, player.MakeSendingData())
@@ -251,7 +255,7 @@ func (game *Game) BroadcastLoop() {
 		for _, tile := range tileState {
 			tileStateList = append(tileStateList, tile.MakeSendingData())
 		}
-
+		// log.Println(tileStateList)
 		gameState := &message.GameState{
 			PlayerState:     playerList,
 			BulletState:     bulletList,
@@ -270,8 +274,7 @@ func (game *Game) BroadcastLoop() {
 			log.Printf("Failed to marshal GameState: %v", err)
 			return
 		}
-		// log.Print("healpack: ")
-		// log.Println(healPackList)
+
 		game.broadcast(data)
 	}
 }

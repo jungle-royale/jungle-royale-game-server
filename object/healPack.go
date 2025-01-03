@@ -47,3 +47,11 @@ func (heal *HealPack) MakeSendingData() *message.HealPackState {
 		Y:      heal.physicalObject.GetY(),
 	}
 }
+
+func (heal *HealPack) GetObjectType() int {
+	return OBJECT_HEALPACK
+}
+
+func (heal *HealPack) GetObjectId() string {
+	return heal.Id
+}

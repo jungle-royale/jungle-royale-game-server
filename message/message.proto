@@ -102,7 +102,7 @@ message PlayerDeadState {
 }
 
 message TileState {
-    int32 tileId = 1;
+    string tileId = 1;
     float x = 2;
     float y = 3;
     int32 tileState = 4;

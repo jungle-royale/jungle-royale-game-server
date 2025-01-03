@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-const BULLET_SPEED = 1
+const BULLET_SPEED = 0.2
 const BULLET_RANGE = 20.0
 const BULLET_DAMAGE = 20
 const BULLET_RADIOUS = 0.2
@@ -33,7 +33,6 @@ type Bullet struct {
 	lastTick       int
 	BulletType     int
 	isValid        bool
-	collisionList  []int
 	physicalObject physical.Physical
 }
 
@@ -56,7 +55,6 @@ func NewBullet(
 		BULLET_MAX_TICK,
 		magicType,
 		true,
-		[]int{ObjectPlayer},
 		physical.NewCircle(startX+dx, startY+dy, BULLET_RADIOUS),
 	}
 }
@@ -87,6 +85,10 @@ func (bullet *Bullet) GetPhysical() *physical.Physical {
 	return &bullet.physicalObject
 }
 
-func (bullet *Bullet) addCollider(objectType int, effect func(obj Object)) {
+func (bullet *Bullet) GetObjectType() int {
+	return OBJECT_BULLET
+}
 
+func (bullet *Bullet) GetObjectId() string {
+	return bullet.bulletId
 }

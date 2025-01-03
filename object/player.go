@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-const PLAYER_SPEED = 0.3
-const DASH_SPEED = 0.6
-const DASH_TICK = 5
-const DASH_COOLTIME = 60 // 1sec
+const PLAYER_SPEED = 0.07
+const DASH_SPEED = 0.17
+const DASH_TICK = 10
+const DASH_COOLTIME = 20 // 0.33 sec
 const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
 
@@ -69,7 +69,6 @@ type Player struct {
 	health         int
 	MagicType      int
 	DyingStatus    *PlayerDead
-	collisionList  []int
 	physicalObject physical.Physical
 }
 
@@ -90,7 +89,6 @@ func NewPlayer(id string, x float32, y float32) *Player {
 		100,
 		BULLET_NONE,
 		NewPlayerDead("", id, DYING_NONE),
-		[]int{ObjectHealPack, ObjectMagicItem},
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
 	}
 }
@@ -151,7 +149,12 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 	}
 }
 
-func (player *Player) HeatedBullet(bullet *Bullet) {
+func (player *Player) HeatedBullet(bullet *Bullet) bool {
+
+	if bullet.playerId == player.id {
+		return false
+	}
+
 	if bullet.BulletType == BULLET_NONE {
 		player.mu.Lock()
 		player.health -= BULLET_DAMAGE
@@ -185,6 +188,8 @@ func (player *Player) HeatedBullet(bullet *Bullet) {
 			count--
 		}
 	}
+
+	return true
 }
 
 func (player *Player) Dead(killer string, dyingStatus int, placement int) {
@@ -224,6 +229,10 @@ func (player *Player) GetPhysical() *physical.Physical {
 	return &player.physicalObject
 }
 
-func (player *Player) addCollider(objectType int, effect func(obj Object)) {
+func (player *Player) GetObjectType() int {
+	return OBJECT_PLAYER
+}
 
+func (player *Player) GetObjectId() string {
+	return player.id
 }
