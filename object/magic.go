@@ -49,3 +49,11 @@ func (magic *Magic) MakeSendingData() *message.MagicItemState {
 		Y:         magic.physicalObject.GetY(),
 	}
 }
+
+func (magic *Magic) GetObjectType() int {
+	return OBJECT_MAGICITEM
+}
+
+func (magic *Magic) GetObjectId() string {
+	return magic.ItemId
+}

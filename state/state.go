@@ -20,7 +20,8 @@ const (
 
 type State struct {
 	GameState    int
-	Tiles        *util.Map[int, *object.Tile]
+	ChunkNum     int
+	Tiles        *util.Map[string, *object.Tile]
 	Players      *util.Map[string, *object.Player]
 	PlayerDead   *util.Map[string, *object.PlayerDead]
 	Bullets      *util.Map[string, *object.Bullet]
@@ -33,7 +34,7 @@ type State struct {
 
 func NewState() *State {
 	return &State{
-		Tiles:        util.NewSyncMap[int, *object.Tile](),
+		Tiles:        util.NewSyncMap[string, *object.Tile](),
 		Players:      util.NewSyncMap[string, *object.Player](),
 		PlayerDead:   util.NewSyncMap[string, *object.PlayerDead](),
 		Bullets:      util.NewSyncMap[string, *object.Bullet](),
@@ -58,20 +59,22 @@ func randomShuffle(n int) []int {
 }
 
 func (state *State) ConfigureState(chunkNum int, playingTime int) {
+
+	state.ChunkNum = chunkNum
 	state.MaxCoord = float32(chunkNum * cons.CHUNK_LENGTH)
 
 	state.LastGameTick = playingTime * 1000 / 16
 
 	// map tile setting
-	tileIdx := 0
 	for i := 0; i < chunkNum; i++ {
 		for j := 0; j < chunkNum; j++ {
-			state.Tiles.Store(tileIdx, object.NewTile(
-				tileIdx,
+			// log.Println(i, j)
+			tildId := uuid.New().String()
+			state.Tiles.Store(tildId, object.NewTile(
+				tildId,
 				float32(i*cons.CHUNK_LENGTH),
 				float32(j*cons.CHUNK_LENGTH),
 			))
-			tileIdx++
 		}
 	}
 

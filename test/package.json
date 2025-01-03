@@ -9,8 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "artillery": "^2.0.21",
     "faker": "^5.5.3",
-    "protobufjs": "^7.4.0",
-    "google-protobuf": "^3.21.4"
+    "google-protobuf": "^3.21.4",
+    "protobufjs": "^7.4.0"
   }
 }

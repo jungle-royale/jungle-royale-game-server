@@ -1,80 +1,37 @@
 package object
 
 import (
-	"reflect"
-	"sync"
-
-	"google.golang.org/protobuf/proto"
+	"jungle-royale/object/physical"
 )
 
 // Mover object enum
-const OBJECT_NUM = 2
+const OBJECT_NUM = 4
 const MOVER_OBJECT_NUM = 2
 const (
 	// mover object
-	ObjectPlayer = iota
-	ObjectBullet
+	OBJECT_PLAYER = iota
+	OBJECT_BULLET
 
 	// nonmover object
-	ObjectHealPack
-	ObjectMagicItem
+	OBJECT_HEALPACK
+	OBJECT_MAGICITEM
 )
 
 type Object interface {
+	GetObjectType() int
+	GetObjectId() string
+	Collider
+}
+
+type Collider interface {
+	GetPhysical() *physical.Physical
 }
 
 type Mover interface {
 	CalcGameTick() // move, collision
-	MakeSendingData() *proto.Message
 	IsValid() bool
-	addCollider(objectType int, effect func(obj Object))
+	Object
 }
 
 type NonMover interface {
-}
-
-////////////////////////////////////////////////////////////
-
-type ObjectSyncMap struct {
-	ObjectType reflect.Type
-	Map        sync.Map
-}
-
-// ex) NewMoverSyncMap(Player{})
-func NewObjectSyncMap(t reflect.Type) *ObjectSyncMap {
-	return &ObjectSyncMap{
-		t,
-		sync.Map{},
-	}
-}
-
-type SyncMapList struct {
-	objectLists map[int]*ObjectSyncMap
-}
-
-func NewMoverSyncMapList() *SyncMapList {
-
-	list := make(map[int]*ObjectSyncMap)
-	list[ObjectPlayer] = NewObjectSyncMap(reflect.TypeOf(Player{}))
-	list[ObjectBullet] = NewObjectSyncMap(reflect.TypeOf(Bullet{}))
-	list[ObjectHealPack] = NewObjectSyncMap((reflect.TypeOf(HealPack{})))
-	list[ObjectMagicItem] = NewObjectSyncMap((reflect.TypeOf(Magic{})))
-
-	return &SyncMapList{list}
-}
-
-func (mlist *SyncMapList) GetPlayers() *sync.Map {
-	return &mlist.objectLists[ObjectPlayer].Map
-}
-
-func (mlist *SyncMapList) GetBullets() *sync.Map {
-	return &mlist.objectLists[ObjectBullet].Map
-}
-
-func (mlist *SyncMapList) GetHealPacks() *sync.Map {
-	return &mlist.objectLists[ObjectHealPack].Map
-}
-
-func (mlist *SyncMapList) GetMagicItems() *sync.Map {
-	return &mlist.objectLists[ObjectMagicItem].Map
 }
