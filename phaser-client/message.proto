@@ -36,8 +36,8 @@ message GameState {
     repeated BulletState bulletState = 2;
     repeated HealPackState healPackState = 3;
     repeated MagicItemState magicItemState = 4;
-    repeated PlayerDeadState playerDeadState = 5;
-    repeated TileState tileState = 6;
+    repeated TileState tileState = 5;
+    ChangingState changingState = 6;
 }
 
 message PlayerState {
@@ -86,6 +86,35 @@ message MagicItemState {
     float y = 4;
 }
 
+message TileState {
+    string tileId = 1;
+    float x = 2;
+    float y = 3;
+    int32 tileState = 4;
+    // 0: tile normal
+    // 1: tile dangerous (tile fall in 5 sec)
+}
+
+message ChangingState {
+    repeated HeatBulletState heatBulletState = 1;
+    repeated GetItemState getItemState = 2;
+    repeated PlayerDeadState playerDeadState = 3;
+}
+
+message HeatBulletState {
+    string bulletId = 1;
+    string playerId = 2;
+}
+
+message GetItemState {
+    string itemId = 1;
+    string playerId = 2;
+    int32 itemType = 3;
+    // 1: healpack
+    // 2: stone magic
+    // 3: fire magic
+}
+
 message PlayerDeadState {
     string killerId = 1;
     string deadId = 2;
@@ -97,13 +126,4 @@ message PlayerDeadState {
 
     int32 killNum = 4;
     int32 Placement = 5;
-}
-
-message TileState {
-    string tileId = 1;
-    float x = 2;
-    float y = 3;
-    int32 tileState = 4;
-    // 0: tile normal
-    // 1: tile dangerous (tile fall in 5 sec)
 }

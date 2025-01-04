@@ -64,13 +64,24 @@ func (calculator *Calculator) CalcGameTickState() {
 		if !player.IsValid() {
 			player.DyingStatus.Placement = calculator.state.Players.Length()
 			calculator.state.Players.Delete(playerId)
-			calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
+			calculator.state.ChangingState.PlayerDeadStateList.Add(*player.DyingStatus)
 			if killer, ok := calculator.state.Players.Get(player.DyingStatus.Killer); ok {
 				(*killer).DyingStatus.Kill()
 			}
+			calculator.chunk.RemoveKey(
+				player.GetObjectId(),
+				object.OBJECT_PLAYER,
+				calculator.chunk.getChunkIndexSet(*player.GetPhysical()),
+			)
 			return true
 		}
 		calculator.CalcMover(player)
+
+		// create bullet
+		if player.IsShooting && player.ShootingCoolTime <= 0 {
+			newBullet := player.CreateBullet()
+			calculator.state.Bullets.Store(newBullet.GetObjectId(), newBullet)
+		}
 
 		chunkIndexSet := calculator.chunk.getChunkIndexSet(*player.GetPhysical())
 		chunkIndexSet.Range(func(ci ChunkIndex) bool {
@@ -87,6 +98,13 @@ func (calculator *Calculator) CalcGameTickState() {
 							calculator.chunk.getChunkIndexSet(*(*healPack).GetPhysical()),
 						)
 						player.GetHealPack()
+						calculator.state.ChangingState.GetItemStateList.Add(
+							object.NewGetItemState(
+								(*healPack).GetObjectId(),
+								player.GetObjectId(),
+								object.ITEM_HEALPACK,
+							),
+						)
 						return false
 					}
 				}
@@ -102,6 +120,11 @@ func (calculator *Calculator) CalcGameTickState() {
 							(*magicItem).GetObjectId(),
 							object.OBJECT_HEALPACK,
 							calculator.chunk.getChunkIndexSet(*(*magicItem).GetPhysical()),
+						)
+						calculator.state.ChangingState.GetItemStateList.Add(
+							(*magicItem).MakeGetItemState(
+								player.GetObjectId(),
+							),
 						)
 						return false
 					}
@@ -121,33 +144,13 @@ func (calculator *Calculator) CalcGameTickState() {
 				calculator.state.Tiles[playerChunkIdx.X][playerChunkIdx.Y].TileState == object.TILE_FALL {
 				player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
 				calculator.state.Players.Delete(playerId)
-				calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
+				calculator.state.ChangingState.PlayerDeadStateList.Add(*player.DyingStatus)
+				calculator.chunk.RemoveKey(
+					player.GetObjectId(),
+					object.OBJECT_PLAYER,
+					chunkIndexSet,
+				)
 			}
-
-			// onTile := false
-			// for i := 0; i < calculator.chunk.chunkNum; i++ {
-			// 	for j := 0; j < calculator.chunk.chunkNum; j++ {
-			// 		tile := calculator.state.Tiles[i][j]
-			// 		if tile.TileState != object.TILE_FALL && tile.PhysicalObject.IsInRectangle(
-			// 			(*player.GetPhysical()).GetX(),
-			// 			(*player.GetPhysical()).GetY(),
-			// 		) {
-			// 			onTile = true
-			// 		}
-			// 		return true
-			// 	}
-			// }
-			// if !onTile {
-			// 	player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
-			// 	calculator.state.Players.Delete(playerId)
-			// 	calculator.state.PlayerDead.Store(playerId, player.DyingStatus)
-			// }
-		}
-
-		// create bullet
-		if player.IsShooting && player.ShootingCoolTime <= 0 {
-			newBullet := player.CreateBullet()
-			calculator.state.Bullets.Store(newBullet.GetObjectId(), newBullet)
 		}
 
 		return true
@@ -169,6 +172,14 @@ func (calculator *Calculator) CalcGameTickState() {
 						if calculator.state.GameState == state.Playing {
 							if (*player).HeatedBullet(bullet) {
 								calculator.state.Bullets.Delete(bulletId)
+								calculator.chunk.RemoveKey(
+									bulletId,
+									object.OBJECT_BULLET,
+									chunkIndexSet,
+								)
+								calculator.state.ChangingState.HeatBulletStateList.Add(
+									bullet.MakeHeatBulletState((*player).GetObjectId()),
+								)
 								return false
 							}
 						}
@@ -181,6 +192,11 @@ func (calculator *Calculator) CalcGameTickState() {
 
 		if !bullet.IsValid() {
 			calculator.state.Bullets.Delete(bulletId)
+			calculator.chunk.RemoveKey(
+				bulletId,
+				object.OBJECT_BULLET,
+				chunkIndexSet,
+			)
 		}
 		return true
 	})

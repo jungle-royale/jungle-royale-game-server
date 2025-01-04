@@ -57,3 +57,12 @@ func (magic *Magic) GetObjectType() int {
 func (magic *Magic) GetObjectId() string {
 	return magic.ItemId
 }
+
+func (magic *Magic) MakeGetItemState(playerId string) GetItemState {
+	if magic.magicType == STONE_MAGIC {
+		return NewGetItemState(magic.ItemId, playerId, ITEM_STONE_MAGIC)
+	} else if magic.magicType == FIRE_MAGIC {
+		return NewGetItemState(magic.ItemId, playerId, ITEM_FIRE_MAGIC)
+	}
+	return GetItemState{}
+}

@@ -9,13 +9,13 @@ const (
 )
 
 const MAX_PLAYER_NUM = 100
-const WAITING_MAP_CHUNK_NUM = 3
+const WAITING_MAP_CHUNK_NUM = 6
 const BULLET_PER_PLAYER = 4
 
 // Chunk
 const CHUNK_LENGTH = 20
 
 // State
-const TILE_FALL_ALERT_TIME = 5
+const TILE_FALL_ALERT_TIME = 10
 
 // Object

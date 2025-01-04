@@ -27,34 +27,8 @@ const (
 	DYING_FALL
 )
 
-type PlayerDead struct {
-	Killer      string
-	dead        string
-	DyingStatus int
-	KillNum     int
-	Placement   int
-}
-
-func NewPlayerDead(killer string, dead string, ds int) *PlayerDead {
-	return &PlayerDead{
-		killer,
-		dead,
-		ds,
-		0,
-		-1,
-	}
-}
-
-func (pd *PlayerDead) Kill() {
+func (pd *PlayerDeadState) Kill() {
 	pd.KillNum++
-}
-
-func (pd *PlayerDead) MakeSendingData() *message.PlayerDeadState {
-	return &message.PlayerDeadState{
-		KillerId:    pd.Killer,
-		DeadId:      pd.dead,
-		DyingStatus: int32(pd.DyingStatus),
-	}
 }
 
 type Player struct {
@@ -71,7 +45,7 @@ type Player struct {
 	dashCoolTime     int
 	health           int
 	MagicType        int
-	DyingStatus      *PlayerDead
+	DyingStatus      *PlayerDeadState
 	physicalObject   physical.Physical
 	IsShooting       bool
 	ShootingCoolTime int
@@ -93,7 +67,7 @@ func NewPlayer(id string, x float32, y float32) *Player {
 		0,
 		100,
 		BULLET_NONE,
-		NewPlayerDead("", id, DYING_NONE),
+		NewPlayerDeadState("", id, DYING_NONE),
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
 		false,
 		0,
