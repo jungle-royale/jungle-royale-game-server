@@ -7,7 +7,9 @@ import (
 	"jungle-royale/network"
 	"jungle-royale/util"
 	"log"
+	"net"
 	"net/http"
+	"syscall"
 
 	"github.com/gorilla/websocket"
 )
@@ -105,6 +107,16 @@ func (gameManager *GameManager) Listen() {
 			return
 		}
 		defer conn.Close()
+
+		// Nagle 알고리즘 끄기
+		tcpConn := gameManager.getTCPConn(conn)
+		if tcpConn != nil {
+			if err := gameManager.setNoDelay(tcpConn); err != nil {
+				log.Println("Failed to disable Nagle:", err)
+			} else {
+				log.Println("Nagle disabled")
+			}
+		}
 
 		gameId := r.URL.Query().Get("roomId")
 		if gameId == "" {
@@ -279,4 +291,25 @@ func (gameManager *GameManager) handleClientClose(client *Client) {
 		return
 	}
 	(*room).OnClose(client)
+}
+
+// TCP 연결 가져오기
+func (gameManager *GameManager) getTCPConn(conn *websocket.Conn) *net.TCPConn {
+	rawConn := conn.UnderlyingConn() // WebSocket의 net.Conn 가져오기
+	if tcpConn, ok := rawConn.(*net.TCPConn); ok {
+		return tcpConn
+	}
+	return nil
+}
+
+// Nagle 알고리즘 끄기
+func (gameManager *GameManager) setNoDelay(conn *net.TCPConn) error {
+	rawConn, err := conn.SyscallConn()
+	if err != nil {
+		return err
+	}
+
+	return rawConn.Control(func(fd uintptr) {
+		syscall.SetsockoptInt(int(fd), syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 1)
+	})
 }
