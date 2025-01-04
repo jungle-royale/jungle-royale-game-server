@@ -92,3 +92,7 @@ func (bullet *Bullet) GetObjectType() int {
 func (bullet *Bullet) GetObjectId() string {
 	return bullet.bulletId
 }
+
+func (bullet *Bullet) MakeHeatBulletState(heatedPlayerId string) HeatBulletState {
+	return NewHeatBulletState(bullet.bulletId, heatedPlayerId)
+}

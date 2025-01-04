@@ -18,28 +18,28 @@ const (
 )
 
 type State struct {
-	GameState    int
-	ChunkNum     int
-	Tiles        [][]*object.Tile
-	Players      *util.Map[string, *object.Player]
-	PlayerDead   *util.Map[string, *object.PlayerDead]
-	Bullets      *util.Map[string, *object.Bullet]
-	HealPacks    *util.Map[string, *object.HealPack]
-	MagicItems   *util.Map[string, *object.Magic]
-	FallenTime   int
-	MaxCoord     float32
-	LastGameTick int
+	GameState     int
+	ChunkNum      int
+	Tiles         [][]*object.Tile
+	Players       *util.Map[string, *object.Player]
+	Bullets       *util.Map[string, *object.Bullet]
+	HealPacks     *util.Map[string, *object.HealPack]
+	MagicItems    *util.Map[string, *object.Magic]
+	FallenTime    int
+	MaxCoord      float32
+	LastGameTick  int
+	ChangingState *object.ChangingState
 }
 
 func NewState() *State {
 	return &State{
-		Players:      util.NewSyncMap[string, *object.Player](),
-		PlayerDead:   util.NewSyncMap[string, *object.PlayerDead](),
-		Bullets:      util.NewSyncMap[string, *object.Bullet](),
-		HealPacks:    util.NewSyncMap[string, *object.HealPack](),
-		MagicItems:   util.NewSyncMap[string, *object.Magic](),
-		FallenTime:   int(math.MaxInt),
-		LastGameTick: -1,
+		Players:       util.NewSyncMap[string, *object.Player](),
+		Bullets:       util.NewSyncMap[string, *object.Bullet](),
+		HealPacks:     util.NewSyncMap[string, *object.HealPack](),
+		MagicItems:    util.NewSyncMap[string, *object.Magic](),
+		FallenTime:    int(math.MaxInt),
+		LastGameTick:  -1,
+		ChangingState: object.NewChangingState(),
 	}
 }
 

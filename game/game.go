@@ -278,13 +278,6 @@ func (game *Game) BroadcastLoop() {
 			return true
 		})
 
-		playerDeadList := make([]*message.PlayerDeadState, 0)
-		game.state.PlayerDead.Range(func(key string, status *object.PlayerDead) bool {
-			playerDeadList = append(playerDeadList, status.MakeSendingData())
-			game.state.PlayerDead.Delete(key)
-			return true
-		})
-
 		tileStateList := make([]*message.TileState, 0)
 		for i := 0; i < game.state.ChunkNum; i++ {
 			for j := 0; j < game.state.ChunkNum; j++ {
@@ -295,12 +288,12 @@ func (game *Game) BroadcastLoop() {
 		}
 
 		gameState := &message.GameState{
-			PlayerState:     playerList,
-			BulletState:     bulletList,
-			HealPackState:   healPackList,
-			MagicItemState:  magicItemList,
-			PlayerDeadState: playerDeadList,
-			TileState:       tileStateList,
+			PlayerState:    playerList,
+			BulletState:    bulletList,
+			HealPackState:  healPackList,
+			MagicItemState: magicItemList,
+			TileState:      tileStateList,
+			ChangingState:  game.state.ChangingState.MakeSendingData(),
 		}
 
 		data, err := proto.Marshal(&message.Wrapper{

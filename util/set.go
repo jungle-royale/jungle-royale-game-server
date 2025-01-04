@@ -56,7 +56,7 @@ func (set *Set[T]) Range(f func(T) bool) {
 			return f(key.(T))
 		})
 	} else {
-		for k, _ := range set.internal_set {
+		for k := range set.internal_set {
 			if !f(k) {
 				break
 			}
@@ -103,7 +103,7 @@ func (set *Set[T]) KeyList(f func(T) bool) []T {
 			return true
 		})
 	} else {
-		for k, _ := range set.internal_set {
+		for k := range set.internal_set {
 			keys = append(keys, k)
 		}
 	}

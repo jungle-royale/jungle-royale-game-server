@@ -23,8 +23,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "Protobuf code generation completed successfully!"
-
 echo "Generating C# code in temp folder..."
 cd "../$BASE_DIR" || exit
 protoc --proto_path=temp --csharp_out=temp temp/message.proto
@@ -32,3 +30,5 @@ if [ $? -ne 0 ]; then
     echo "Failed to generate C# code."
     exit 1
 fi
+
+echo "Protobuf code generation completed successfully!"

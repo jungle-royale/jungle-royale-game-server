@@ -1,5 +1,5 @@
 config:
-  target: "ws://localhost:8000/room?roomId=test"  # WebSocket 서버 주소
+  target: "ws://localhost:8000/room?roomId=test&clientId=test"  # WebSocket 서버 주소
   phases:
     - duration: 1
       arrivalRate: 3              # 초당 1명의 사용자 연결
