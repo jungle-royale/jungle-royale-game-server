@@ -40,13 +40,13 @@ func (obj *Rectangle) IsCollide(opponent *Physical) bool { // opponent is pointe
 
 	case *Circle:
 
-		closestX := math.Max(float64(obj.X), math.Min(float64(opp.X), float64(obj.X+obj.Width)))
-		closestY := math.Max(float64(obj.Y), math.Min(float64(opp.Y), float64(obj.Y+obj.Length)))
-		distanceX := float64(opp.X) - closestX
-		distanceY := float64(opp.Y) - closestY
+		closestX := math.Max((obj.X), math.Min((opp.X), (obj.X+obj.Width)))
+		closestY := math.Max((obj.Y), math.Min((opp.Y), (obj.Y+obj.Length)))
+		distanceX := (opp.X) - closestX
+		distanceY := (opp.Y) - closestY
 		distanceSquared := distanceX*distanceX + distanceY*distanceY
 
-		if distanceSquared <= float64(opp.Radius*opp.Radius) {
+		if distanceSquared <= (opp.Radius * opp.Radius) {
 			return true
 		} else {
 			return false

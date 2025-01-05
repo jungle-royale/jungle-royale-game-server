@@ -62,7 +62,7 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 				float64(j*cons.CHUNK_LENGTH),
 				i,
 				j,
-			)
+			).SetTileState(0)
 			state.Tiles[i][j] = newTile
 		}
 	}

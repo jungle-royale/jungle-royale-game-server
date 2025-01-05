@@ -5,7 +5,6 @@ import (
 	"jungle-royale/object"
 	"jungle-royale/state"
 	"jungle-royale/util"
-	"log"
 	"time"
 )
 
@@ -95,10 +94,19 @@ func (calculator *Calculator) CalcGameTickState() {
 				}
 				if other, ok := calculator.state.Players.Get(s); ok {
 					if calculator.IsCollider(player, *other) {
-						log.Println("collide")
 						(*player.GetPhysical()).CollideRelocate((*other).GetPhysical())
 						return false
 					}
+				}
+				return true
+			})
+
+			// player - environment object
+			currentTile := calculator.state.Tiles[ci.X][ci.Y]
+			currentTile.Environment.Range(func(eo *object.EnvObject) bool {
+				if calculator.IsCollider(player, eo) {
+					(*player.GetPhysical()).CollideRelocate(eo.GetPhysical())
+					return false
 				}
 				return true
 			})
@@ -147,6 +155,7 @@ func (calculator *Calculator) CalcGameTickState() {
 				}
 				return true
 			})
+
 			return true
 		})
 
@@ -203,6 +212,21 @@ func (calculator *Calculator) CalcGameTickState() {
 				}
 				return true
 			})
+			// bullet - environment object
+			currentTile := calculator.state.Tiles[ci.X][ci.Y]
+			currentTile.Environment.Range(func(eo *object.EnvObject) bool {
+				if !eo.IsShort && calculator.IsCollider(bullet, eo) {
+					calculator.state.Bullets.Delete(bulletId)
+					calculator.chunk.RemoveKey(
+						bulletId,
+						object.OBJECT_BULLET,
+						chunkIndexSet,
+					)
+					return false
+				}
+				return true
+			})
+
 			return true
 		})
 

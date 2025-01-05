@@ -28,8 +28,8 @@ func (obj *Circle) IsCollide(opponent *Physical) bool { // opponent is pointer
 	switch opp := (*opponent).(type) {
 
 	case *Circle:
-		distanceSquared := math.Pow(float64(obj.X-opp.X), 2) + math.Pow(float64(obj.Y-opp.Y), 2)
-		radiousSquared := math.Pow(float64(obj.Radius+opp.Radius), 2)
+		distanceSquared := math.Pow(obj.X-opp.X, 2) + math.Pow(obj.Y-opp.Y, 2)
+		radiousSquared := math.Pow(obj.Radius+opp.Radius, 2)
 		if radiousSquared > distanceSquared {
 			return true
 		} else {
@@ -38,13 +38,13 @@ func (obj *Circle) IsCollide(opponent *Physical) bool { // opponent is pointer
 
 	case *Rectangle:
 
-		closestX := math.Max(float64(opp.X), math.Min(float64(obj.X), float64(opp.X+opp.Width)))
-		closestY := math.Max(float64(opp.Y), math.Min(float64(obj.Y), float64(opp.Y+opp.Length)))
-		distanceX := float64(obj.X) - closestX
-		distanceY := float64(obj.Y) - closestY
+		closestX := math.Max(opp.X, math.Min(obj.X, opp.X+opp.Width))
+		closestY := math.Max(opp.Y, math.Min(obj.Y, opp.Y+opp.Length))
+		distanceX := obj.X - closestX
+		distanceY := obj.Y - closestY
 		distanceSquared := distanceX*distanceX + distanceY*distanceY
 
-		if distanceSquared <= float64(obj.Radius*obj.Radius) {
+		if distanceSquared <= obj.Radius*obj.Radius {
 			return true
 		} else {
 			return false
@@ -87,49 +87,66 @@ func (c *Circle) SetDir(dx, dy float64) {
 	c.Dy = dy
 }
 
-func (c *Circle) CollideRelocate(obj *Physical) {
+func clamp(value, minVal, maxVal float64) float64 {
+	if value < minVal {
+		return minVal
+	}
+	if value > maxVal {
+		return maxVal
+	}
+	return value
+}
 
-	var t, ox, oy, th, fx, fy float64
+func (c *Circle) CollideRelocate(obj *Physical) {
 
 	switch opp := (*obj).(type) {
 
 	case *Circle:
-		xx := c.X - opp.X
-		yy := c.Y - opp.Y
-		rr := c.Radius + opp.Radius
-		a := c.Dx*c.Dx + c.Dy*c.Dy
-		b := xx*c.Dx + yy*c.Dy
-		cC := xx*xx + yy*yy - rr*rr
-		if a == 0 {
+
+		dx := opp.X - c.X
+		dy := opp.Y - c.Y
+		dist := math.Hypot(dx, dy)
+		if dist == 0 {
 			return
 		}
-		disc := b*b - a*cC
-		if disc < 0 {
-			return
+		nx := dx / dist
+		ny := dy / dist
+
+		pen := (c.Radius + opp.Radius) - dist
+		if pen > 0 {
+			c.X -= nx * pen
+			c.Y -= ny * pen
 		}
-		t = (2*b + math.Sqrt(math.Abs(4*b*b-4*a*cC))) / (2 * a)
-
-		ox = c.X - c.Dx*t
-		oy = c.Y - c.Dy*t
-
-		deltaY := oy - opp.Y
-		deltaX := ox - opp.X
-		th = math.Atan2(deltaY, deltaX)
 
 	case *Rectangle:
+
+		closestX := clamp(c.X, opp.X, opp.X+opp.Width)
+		closestY := clamp(c.Y, opp.Y, opp.Y+opp.Length)
+
+		dx := c.X - closestX
+		dy := c.Y - closestY
+		distSq := dx*dx + dy*dy
+
+		radiusSq := c.Radius * c.Radius
+		if distSq <= radiusSq {
+
+			dist := math.Sqrt(distSq)
+			if dist == 0 {
+				c.Y += c.Radius
+				return
+			}
+
+			pen := c.Radius - dist
+
+			nx := dx / dist
+			ny := dy / dist
+
+			c.X += nx * pen
+			c.Y += ny * pen
+		}
 
 	default:
 		log.Printf("err: type is unmatched")
 		return
 	}
-
-	va := math.Sin(-th)*c.Dy*t + math.Cos(th)*c.Dx*t
-
-	ax := va * math.Sin(th)
-	ay := va * math.Cos(th)
-
-	fx = ox + ax
-	fy = oy + ay
-
-	c.SetCoord(fx, fy)
 }
