@@ -16,14 +16,15 @@ import (
 )
 
 type Game struct {
-	minPlayerNum   int
-	playingTime    int
-	playerNum      int
-	state          *state.State
-	calculator     *calculator.Calculator
-	clients        *util.Map[ClientId, *Client]
-	alertGameStart func() // 게임 시작을 알림
-	alertGameEnd   func() // 게임 종료를 알림
+	minPlayerNum      int
+	playingTime       int
+	playerNum         int
+	state             *state.State
+	calculator        *calculator.Calculator
+	clients           *util.Map[ClientId, *Client]
+	serverClientTable *util.Map[string, ClientId]
+	alertGameStart    func() // 게임 시작을 알림
+	alertGameEnd      func() // 게임 종료를 알림
 }
 
 // playing time - second
@@ -36,14 +37,15 @@ func NewGame(
 	// playing time - sec
 	gameState := state.NewState()
 	game := &Game{
-		minPlayerNum:   minPlayerNum,
-		playingTime:    playingTime,
-		playerNum:      0,
-		state:          gameState,
-		calculator:     calculator.NewCalculator(gameState),
-		clients:        util.NewSyncMap[ClientId, *Client](),
-		alertGameStart: startHandler,
-		alertGameEnd:   endHandler,
+		minPlayerNum:      minPlayerNum,
+		playingTime:       playingTime,
+		playerNum:         0,
+		state:             gameState,
+		calculator:        calculator.NewCalculator(gameState),
+		clients:           util.NewSyncMap[ClientId, *Client](),
+		serverClientTable: util.NewSyncMap[string, ClientId](),
+		alertGameStart:    startHandler,
+		alertGameEnd:      endHandler,
 	}
 	return game
 }
@@ -135,46 +137,6 @@ func (game *Game) StartGame() *Game {
 	go game.BroadcastLoop()    // broadcast to client
 	go game.CalcSecLoop()
 	return game
-}
-
-// Room Interface
-func (game *Game) OnClient(client *Client) {
-	if game.state.GameState == state.Waiting {
-		game.playerNum++
-		game.SetPlayer(client)
-		game.clients.Store(client.ID, client)
-	}
-}
-
-func (game *Game) SetPlayer(client *Client) {
-
-	clientId := string(client.ID)
-
-	x := float64(rand.Intn(int(game.state.MaxCoord)))
-	y := float64(rand.Intn(int(game.state.MaxCoord)))
-
-	game.state.AddPlayer(clientId, x, y)
-
-	// send GameInit message
-	gameInit := &message.GameInit{
-		Id: clientId,
-	}
-	data, err := proto.Marshal(&message.Wrapper{
-		MessageType: &message.Wrapper_GameInit{
-			GameInit: gameInit,
-		},
-	})
-	if err != nil {
-		log.Printf("Failed to marshal GameInit: %v", err)
-		return
-	}
-
-	if err := client.write(data); err != nil {
-		log.Printf("Failed to send GameInit message to client %s: %v", clientId, err)
-		return
-	}
-
-	// log.Printf("보낸겨: %s", gameInit.String())
 }
 
 func (game *Game) CalcGameTickLoop() {
@@ -310,16 +272,33 @@ func (game *Game) BroadcastLoop() {
 	}
 }
 
-// Room Interface
 func (game *Game) OnMessage(data []byte, id string) {
 	game.handleMessage(id, data)
+}
+
+func (game *Game) OnClient(client *Client) {
+	if game.state.GameState == state.Waiting {
+		game.playerNum++
+		game.SetPlayer(client)
+		game.clients.Store(client.ID, client)
+		game.serverClientTable.Store(client.serverClientId, client.ID)
+	} else {
+		_, exists := game.serverClientTable.Get(client.serverClientId)
+		if exists {
+			log.Printf("reconnection: %s", client.serverClientId)
+			game.clients.Store(client.ID, client)
+		} else {
+			log.Printf("fail to reconnect: %s", client.serverClientId)
+			client.close()
+		}
+	}
 }
 
 func (game *Game) OnClose(client *Client) {
 	game.clients.Delete(client.ID)
 	if game.clients.Length() == 0 {
-		log.Print("clinets count zero")
-		game.alertGameEnd()
+		log.Print("clinet's count zero")
+		game.alertGameEnd() // TODO: 게임 정보 전송
 	}
 }
 
@@ -347,6 +326,37 @@ func (game *Game) handleMessage(clientId string, data []byte) {
 	if changeBulletState := wrapper.GetChangeBulletState(); changeBulletState != nil {
 		game.state.ChangeBulletState(clientId, changeBulletState)
 	}
+}
+
+func (game *Game) SetPlayer(client *Client) {
+
+	clientId := string(client.ID)
+
+	x := rand.Intn(int(game.state.MaxCoord))
+	y := rand.Intn(int(game.state.MaxCoord))
+
+	game.state.AddPlayer(clientId, float32(x), float32(y))
+
+	// send GameInit message
+	gameInit := &message.GameInit{
+		Id: clientId,
+	}
+	data, err := proto.Marshal(&message.Wrapper{
+		MessageType: &message.Wrapper_GameInit{
+			GameInit: gameInit,
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to marshal GameInit: %v", err)
+		return
+	}
+
+	if err := client.write(data); err != nil {
+		log.Printf("Failed to send GameInit message to client %s: %v", clientId, err)
+		return
+	}
+
+	// log.Printf("보낸겨: %s", gameInit.String())
 }
 
 func (game *Game) broadcast(data []byte) {

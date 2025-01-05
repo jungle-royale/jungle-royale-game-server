@@ -7,7 +7,10 @@ import (
 	"jungle-royale/network"
 	"jungle-royale/util"
 	"log"
+	"net"
 	"net/http"
+	"strconv"
+	"syscall"
 
 	"github.com/gorilla/websocket"
 )
@@ -25,6 +28,7 @@ type GameManager struct {
 	clientMessageChannel chan *ClientMessage
 	clientCloseChannel   chan *Client
 	debug                bool // production, development 환경 체크
+	debugClientCount     int  // debug 전용
 }
 
 // add game
@@ -38,6 +42,7 @@ func NewGameManager(
 		make(chan *ClientMessage, MaxClientCount),
 		make(chan *Client, MaxClientCount),
 		debug,
+		0,
 	}
 	return &socket
 }
@@ -106,19 +111,37 @@ func (gameManager *GameManager) Listen() {
 		}
 		defer conn.Close()
 
+		// Nagle 알고리즘 끄기
+		tcpConn := gameManager.getTCPConn(conn)
+		if tcpConn != nil {
+			if err := gameManager.setNoDelay(tcpConn); err != nil {
+				log.Println("Failed to disable Nagle:", err)
+			} else {
+				log.Println("Nagle disabled")
+			}
+		}
+
 		gameId := r.URL.Query().Get("roomId")
 		if gameId == "" {
 			http.Error(w, "Missing gameId query parameter", http.StatusBadRequest)
 			return
 		}
 
-		serverClientId := r.URL.Query().Get("clientId")
-		if serverClientId == "" {
-			http.Error(w, "Missing serverClientId query parameter", http.StatusBadRequest)
-			return
+		var serverClientId string
+
+		if gameManager.debug {
+			serverClientId = strconv.Itoa(gameManager.debugClientCount)
+			gameManager.debugClientCount += 1
+		} else {
+			serverClientId = r.URL.Query().Get("clientId")
+			if serverClientId == "" {
+				http.Error(w, "Missing serverClientId query parameter", http.StatusBadRequest)
+				return
+			}
 		}
 
 		log.Println("new client", gameId, serverClientId)
+
 		newClient := NewClient(GameId(gameId), serverClientId, conn)
 		gameManager.clientChannel <- newClient
 
@@ -162,7 +185,7 @@ func (gameManager *GameManager) Listen() {
 }
 
 func (gameManager *GameManager) sendStartMessage(gameId GameId) {
-	url := "http://wep-api.eternalsnowman.com"
+	url := "http://web-api.eternalsnowman.com:8080"
 	if gameManager.debug {
 		url = "http://localhost:8080"
 	}
@@ -188,7 +211,7 @@ func (gameManager *GameManager) sendStartMessage(gameId GameId) {
 }
 
 func (gameManager *GameManager) sendEndMessage(gameId GameId) {
-	url := "http://wep-api.eternalsnowman.com"
+	url := "http://web-api.eternalsnowman.com:8080"
 	if gameManager.debug {
 		url = "http://localhost:8080"
 	}
@@ -232,7 +255,7 @@ func (gameManager *GameManager) CreateGame(
 	)
 	newGame.SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
 	gameManager.games.Store(gameId, newGame)
-	log.Printf("room count: %d", gameManager.games.Length())
+	log.Printf("New Game Room: %s", gameId)
 }
 
 func (gameManager *GameManager) handleGameStart(gameId GameId) {
@@ -254,7 +277,9 @@ func (gameManager *GameManager) handleGameEnd(gameId GameId) {
 func (gameManager *GameManager) setClient(client *Client) {
 	room, exists := gameManager.games.Get(client.GameID)
 	if !exists || room == nil {
-		log.Printf("No Room client: %s", client.GameID)
+		log.Printf("No Room: client is.. %s", client.GameID)
+		gameManager.handleGameEnd(client.GameID)
+		client.close()
 		return
 	}
 	(*room).OnClient(client)
@@ -265,7 +290,8 @@ func (gameManager *GameManager) handleClientMessage(clientMessage *ClientMessage
 	clientId := clientMessage.ClientId
 	room, exists := gameManager.games.Get(gameId)
 	if !exists || room == nil {
-		log.Printf("No Room clinet message: %s", gameId)
+		log.Printf("No Room: clinet message is.. %s", gameId)
+		gameManager.handleGameEnd(gameId)
 		return
 	}
 	(*room).OnMessage(clientMessage.Data, string(clientId))
@@ -279,4 +305,25 @@ func (gameManager *GameManager) handleClientClose(client *Client) {
 		return
 	}
 	(*room).OnClose(client)
+}
+
+// TCP 연결 가져오기
+func (gameManager *GameManager) getTCPConn(conn *websocket.Conn) *net.TCPConn {
+	rawConn := conn.UnderlyingConn() // WebSocket의 net.Conn 가져오기
+	if tcpConn, ok := rawConn.(*net.TCPConn); ok {
+		return tcpConn
+	}
+	return nil
+}
+
+// Nagle 알고리즘 끄기
+func (gameManager *GameManager) setNoDelay(conn *net.TCPConn) error {
+	rawConn, err := conn.SyscallConn()
+	if err != nil {
+		return err
+	}
+
+	return rawConn.Control(func(fd uintptr) {
+		syscall.SetsockoptInt(int(fd), syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 1)
+	})
 }
