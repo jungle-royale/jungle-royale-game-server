@@ -34,7 +34,7 @@ type ChunkIndex struct {
 	Y int
 }
 
-func (chunk *Chunk) getChunkIndex(x, y float32) (ChunkIndex, bool) {
+func (chunk *Chunk) getChunkIndex(x, y float64) (ChunkIndex, bool) {
 	ret := true
 	if x < 0 {
 		x = 0

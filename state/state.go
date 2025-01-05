@@ -58,8 +58,8 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 			tildId := uuid.New().String()
 			newTile := object.NewTile(
 				tildId,
-				float32(i*cons.CHUNK_LENGTH),
-				float32(j*cons.CHUNK_LENGTH),
+				float64(i*cons.CHUNK_LENGTH),
+				float64(j*cons.CHUNK_LENGTH),
 				i,
 				j,
 			)
@@ -72,7 +72,7 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	// log.Println(state.FallenTime)
 }
 
-func (state *State) AddPlayer(id string, x float32, y float32) {
+func (state *State) AddPlayer(id string, x, y float64) {
 	newPlayer := object.NewPlayer(
 		id,
 		x,

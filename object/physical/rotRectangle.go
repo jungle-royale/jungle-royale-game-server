@@ -6,10 +6,10 @@ type RotRectangle struct {
 }
 
 func NewRotRectangle(
-	x float32,
-	y float32,
-	width float32,
-	length float32,
+	x float64,
+	y float64,
+	width float64,
+	length float64,
 	rotation float64,
 ) *RotRectangle {
 	return &RotRectangle{

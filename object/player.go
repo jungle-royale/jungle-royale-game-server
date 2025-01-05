@@ -11,9 +11,11 @@ import (
 )
 
 const PLAYER_SPEED = 0.07
-const DASH_SPEED = 0.17
-const DASH_TICK = 10
-const DASH_COOLTIME = 20 // 0.33 sec
+
+// const PLAYER_SPEED = 1
+const DASH_SPEED = 0.3
+const DASH_TICK = 6
+const DASH_COOLTIME = 10 // 0.1 sec
 const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
 const SHOOTING_COOLTIME = 6 // 0.1 sec
@@ -34,11 +36,9 @@ func (pd *PlayerDeadState) Kill() {
 type Player struct {
 	mu               sync.Mutex
 	id               string
-	dx               float32
-	dy               float32
 	dir              float64 // (dx, dy)
 	angle            float64 // degree
-	speed            float32
+	speed            float64
 	isMoveing        bool
 	isDashing        bool
 	dashTime         int
@@ -51,13 +51,11 @@ type Player struct {
 	ShootingCoolTime int
 }
 
-func NewPlayer(id string, x float32, y float32) *Player {
+func NewPlayer(id string, x, y float64) *Player {
 
 	return &Player{
 		sync.Mutex{},
 		id,
-		0,
-		0,
 		0,
 		0,
 		PLAYER_SPEED,
@@ -91,7 +89,7 @@ func (player *Player) CreateBullet() *Bullet {
 	return newBullet
 }
 
-func (player *Player) SetLocation(x float32, y float32) {
+func (player *Player) SetLocation(x, y float64) {
 	player.mu.Lock()
 	player.physicalObject.SetCoord(x, y)
 	player.mu.Unlock()
@@ -100,7 +98,7 @@ func (player *Player) SetLocation(x float32, y float32) {
 func (player *Player) CalcGameTick() {
 	player.mu.Lock()
 	if player.isMoveing {
-		player.physicalObject.Move(player.dx, player.dy)
+		player.physicalObject.Move()
 	}
 	if player.dashCoolTime > 0 {
 		player.dashCoolTime--
@@ -111,8 +109,10 @@ func (player *Player) CalcGameTick() {
 			player.isDashing = false
 			player.dashCoolTime = DASH_COOLTIME
 			player.speed = PLAYER_SPEED
-			player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
-			player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
+			player.physicalObject.SetDir(
+				float64(player.speed)*math.Sin(player.dir*(math.Pi/180)),
+				float64(player.speed)*math.Cos(player.dir*(math.Pi/180))*-1,
+			)
 		}
 	}
 	if player.ShootingCoolTime > 0 {
@@ -128,8 +128,10 @@ func (player *Player) IsValid() bool {
 func (player *Player) DirChange(angle float64, isMoved bool) {
 	player.mu.Lock()
 	player.dir = angle
-	player.dx = player.speed * float32(math.Sin(angle*(math.Pi/180)))
-	player.dy = player.speed * float32(math.Cos(angle*(math.Pi/180))) * -1
+	player.physicalObject.SetDir(
+		player.speed*math.Sin(angle*(math.Pi/180)),
+		player.speed*math.Cos(angle*(math.Pi/180))*-1,
+	)
 	player.isMoveing = isMoved
 	player.mu.Unlock()
 }
@@ -141,8 +143,8 @@ func (player *Player) AngleChange(angle float64) {
 func (player *Player) MakeSendingData() *message.PlayerState {
 	return &message.PlayerState{
 		Id:           player.id,
-		X:            player.physicalObject.GetX(),
-		Y:            player.physicalObject.GetY(),
+		X:            float32(player.physicalObject.GetX()),
+		Y:            float32(player.physicalObject.GetY()),
 		Health:       int32(player.health),
 		MagicType:    int32(player.MagicType),
 		Angle:        float32(player.angle),
@@ -219,8 +221,10 @@ func (player *Player) DoDash() {
 		player.mu.Lock()
 		player.isDashing = true
 		player.speed = DASH_SPEED
-		player.dx = player.speed * float32(math.Sin(player.dir*(math.Pi/180)))
-		player.dy = player.speed * float32(math.Cos(player.dir*(math.Pi/180))) * -1
+		player.physicalObject.SetDir(
+			player.speed*math.Sin(player.dir*(math.Pi/180)),
+			player.speed*math.Cos(player.dir*(math.Pi/180))*-1,
+		)
 		player.dashTime = DASH_TICK
 		player.mu.Unlock()
 	}

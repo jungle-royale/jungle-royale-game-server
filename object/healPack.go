@@ -18,7 +18,7 @@ type HealPack struct {
 	physicalObject physical.Physical
 }
 
-func NewHealPack(x float32, y float32) *HealPack {
+func NewHealPack(x, y float64) *HealPack {
 	return &HealPack{
 		sync.Mutex{},
 		uuid.New().String(),
@@ -34,7 +34,7 @@ func (heal *HealPack) GetPhysical() *physical.Physical {
 	return &heal.physicalObject
 }
 
-func (heal *HealPack) SetLocation(x float32, y float32) {
+func (heal *HealPack) SetLocation(x, y float64) {
 	heal.mu.Lock()
 	heal.physicalObject.SetCoord(x, y)
 	heal.mu.Unlock()
@@ -43,8 +43,8 @@ func (heal *HealPack) SetLocation(x float32, y float32) {
 func (heal *HealPack) MakeSendingData() *message.HealPackState {
 	return &message.HealPackState{
 		ItemId: heal.Id,
-		X:      heal.physicalObject.GetX(),
-		Y:      heal.physicalObject.GetY(),
+		X:      float32(heal.physicalObject.GetX()),
+		Y:      float32(heal.physicalObject.GetY()),
 	}
 }
 

@@ -22,9 +22,11 @@ type Tile struct {
 	PhysicalObject *physical.Rectangle
 	ChildTile      *util.Set[*Tile]
 	ParentTile     *Tile
+	tileType       int
+	Environment    *util.Set[*physical.Physical]
 }
 
-func NewTile(tileId string, x, y float32, idxi, idxj int) *Tile {
+func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
 	return &Tile{
 		IdxI:      idxi,
 		IdxJ:      idxj,
@@ -36,8 +38,9 @@ func NewTile(tileId string, x, y float32, idxi, idxj int) *Tile {
 			Width:  cons.CHUNK_LENGTH,
 			Length: cons.CHUNK_LENGTH,
 		},
-		ChildTile:  util.NewSet[*Tile](),
-		ParentTile: nil,
+		ChildTile:   util.NewSet[*Tile](),
+		ParentTile:  nil,
+		Environment: util.NewSet[*physical.Physical](),
 	}
 }
 
@@ -49,7 +52,7 @@ func (tile *Tile) MakeSendingData() *message.TileState {
 	return &message.TileState{
 		TileId:    tile.TileId,
 		TileState: int32(tile.TileState),
-		X:         tile.PhysicalObject.X,
-		Y:         tile.PhysicalObject.Y,
+		X:         float32(tile.PhysicalObject.X),
+		Y:         float32(tile.PhysicalObject.Y),
 	}
 }
