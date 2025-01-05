@@ -90,10 +90,18 @@ func (gameManager *GameManager) Listen() {
 			return
 		}
 
-		gameManager.CreateGame(GameId(req.GameID), req.MinPlayers, req.MaxPlayTime)
+		gameId := GameId(req.GameID)
 
-		response := `{"success":true,"message":"Game room created successfully"}`
-		fmt.Fprintln(w, response)
+		_, exists := gameManager.games.Get(gameId)
+		if exists {
+			log.Printf("이미 존재하는 게임: %s", gameId)
+			response := `{"success":false,"message":"Game room created successfully"}`
+			fmt.Fprintln(w, response)
+		} else {
+			gameManager.CreateGame(gameId, req.MinPlayers, req.MaxPlayTime)
+			response := `{"success":true,"message":"Game room created successfully"}`
+			fmt.Fprintln(w, response)
+		}
 	})
 
 	http.HandleFunc("/room", func(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +119,6 @@ func (gameManager *GameManager) Listen() {
 		}
 		defer conn.Close()
 
-		// Nagle 알고리즘 끄기
 		tcpConn := gameManager.getTCPConn(conn)
 		if tcpConn != nil {
 			if err := gameManager.setNoDelay(tcpConn); err != nil {
@@ -121,18 +128,19 @@ func (gameManager *GameManager) Listen() {
 			}
 		}
 
-		gameId := r.URL.Query().Get("roomId")
-		if gameId == "" {
-			http.Error(w, "Missing gameId query parameter", http.StatusBadRequest)
-			return
-		}
-
+		var gameId string
 		var serverClientId string
 
 		if gameManager.debug {
+			gameId = "test"
 			serverClientId = strconv.Itoa(gameManager.debugClientCount)
 			gameManager.debugClientCount += 1
 		} else {
+			gameId := r.URL.Query().Get("roomId")
+			if gameId == "" {
+				http.Error(w, "Missing gameId query parameter", http.StatusBadRequest)
+				return
+			}
 			serverClientId = r.URL.Query().Get("clientId")
 			if serverClientId == "" {
 				http.Error(w, "Missing serverClientId query parameter", http.StatusBadRequest)
