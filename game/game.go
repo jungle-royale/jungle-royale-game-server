@@ -335,7 +335,7 @@ func (game *Game) SetPlayer(client *Client) {
 	x := rand.Intn(int(game.state.MaxCoord))
 	y := rand.Intn(int(game.state.MaxCoord))
 
-	game.state.AddPlayer(clientId, float32(x), float32(y))
+	game.state.AddPlayer(clientId, float64(x), float64(y))
 
 	// send GameInit message
 	gameInit := &message.GameInit{
