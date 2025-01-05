@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"syscall"
 
 	"github.com/gorilla/websocket"
@@ -27,6 +28,7 @@ type GameManager struct {
 	clientMessageChannel chan *ClientMessage
 	clientCloseChannel   chan *Client
 	debug                bool // production, development 환경 체크
+	debugClientCount     int  // debug 전용
 }
 
 // add game
@@ -40,6 +42,7 @@ func NewGameManager(
 		make(chan *ClientMessage, MaxClientCount),
 		make(chan *Client, MaxClientCount),
 		debug,
+		0,
 	}
 	return &socket
 }
@@ -124,13 +127,21 @@ func (gameManager *GameManager) Listen() {
 			return
 		}
 
-		serverClientId := r.URL.Query().Get("clientId")
-		if serverClientId == "" {
-			http.Error(w, "Missing serverClientId query parameter", http.StatusBadRequest)
-			return
+		var serverClientId string
+
+		if gameManager.debug {
+			serverClientId = strconv.Itoa(gameManager.debugClientCount)
+			gameManager.debugClientCount += 1
+		} else {
+			serverClientId = r.URL.Query().Get("clientId")
+			if serverClientId == "" {
+				http.Error(w, "Missing serverClientId query parameter", http.StatusBadRequest)
+				return
+			}
 		}
 
 		log.Println("new client", gameId, serverClientId)
+
 		newClient := NewClient(GameId(gameId), serverClientId, conn)
 		gameManager.clientChannel <- newClient
 
@@ -244,7 +255,7 @@ func (gameManager *GameManager) CreateGame(
 	)
 	newGame.SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
 	gameManager.games.Store(gameId, newGame)
-	log.Printf("room count: %d", gameManager.games.Length())
+	log.Printf("New Game Room: %s", gameId)
 }
 
 func (gameManager *GameManager) handleGameStart(gameId GameId) {
@@ -266,7 +277,8 @@ func (gameManager *GameManager) handleGameEnd(gameId GameId) {
 func (gameManager *GameManager) setClient(client *Client) {
 	room, exists := gameManager.games.Get(client.GameID)
 	if !exists || room == nil {
-		log.Printf("No Room client: %s", client.GameID)
+		log.Printf("No Room: client is.. %s", client.GameID)
+		gameManager.handleGameEnd(client.GameID)
 		return
 	}
 	(*room).OnClient(client)
@@ -277,7 +289,8 @@ func (gameManager *GameManager) handleClientMessage(clientMessage *ClientMessage
 	clientId := clientMessage.ClientId
 	room, exists := gameManager.games.Get(gameId)
 	if !exists || room == nil {
-		log.Printf("No Room clinet message: %s", gameId)
+		log.Printf("No Room: clinet message is.. %s", gameId)
+		gameManager.handleGameEnd(gameId)
 		return
 	}
 	(*room).OnMessage(clientMessage.Data, string(clientId))
