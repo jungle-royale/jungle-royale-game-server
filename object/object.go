@@ -15,6 +15,7 @@ const (
 	// nonmover object
 	OBJECT_HEALPACK
 	OBJECT_MAGICITEM
+	OBJECT_ENVIRONMENT
 )
 
 type Object interface {

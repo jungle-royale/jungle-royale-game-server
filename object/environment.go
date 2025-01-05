@@ -1,48 +1,91 @@
 package object
 
-import "jungle-royale/object/physical"
+import (
+	"jungle-royale/object/physical"
+
+	"github.com/google/uuid"
+)
 
 const TILE_TYPE_NUM = 0
 
 type objectData interface {
-	createPhysical(dx, dy float64) *physical.Physical
+	createEnvObject(dx, dy float64) *EnvObject
 }
 
 type objectCircle struct {
-	objectType int // 0: circle, 1: rectangle
-	x          float64
-	y          float64
-	radious    float64
-	isShort    bool
+	x       float64
+	y       float64
+	radious float64
+	isShort bool
 }
 
-func (c objectCircle) createPhysical(dx, dy float64) *physical.Physical {
-	var ret physical.Physical = physical.NewCircle(c.x+dx, c.y+dy, c.radious)
-	return &ret
+func (c objectCircle) createEnvObject(dx, dy float64) *EnvObject {
+	var p physical.Physical = physical.NewCircle(c.x+dx, c.y+dy, c.radious)
+	return &EnvObject{
+		objId:          uuid.New().String(),
+		physicalObject: p,
+	}
 }
 
 type objectRectangle struct {
-	objectType int // 0: circle, 1: rectangle
-	x          float64
-	y          float64
-	width      float64
-	length     float64
-	isShort    bool
+	x       float64
+	y       float64
+	width   float64
+	length  float64
+	isShort bool
 }
 
-func (r objectRectangle) createPhysical(dx, dy float64) *physical.Physical {
-	var ret physical.Physical = physical.NewRectangle(r.x+dx, r.y+dy, r.width, r.length)
-	return &ret
+func (r objectRectangle) createEnvObject(dx, dy float64) *EnvObject {
+	var p physical.Physical = physical.NewRectangle(r.x+dx, r.y+dy, r.width, r.length)
+	return &EnvObject{
+		objId:          uuid.New().String(),
+		physicalObject: p,
+	}
+}
+
+type EnvObject struct {
+	objId          string
+	IsShort        bool // false → collision with bullet
+	physicalObject physical.Physical
+}
+
+func (eo *EnvObject) GetObjectType() int {
+	return OBJECT_ENVIRONMENT
+}
+
+func (eo *EnvObject) GetObjectId() string {
+	return eo.objId
+}
+
+func (eo *EnvObject) GetPhysical() *physical.Physical {
+	return &eo.physicalObject
 }
 
 // [tile type][number of objects]
 var environment = [][]objectData{
-	{objectCircle{0, 1, 1, 1, true}, objectCircle{0, 4, 3, 2, true}},
+	// tile type 0
+	{
+		objectCircle{2, 18, 1, false},
+		objectCircle{17, 18, 1, false},
+		objectCircle{4, 4, 1, false},
+		objectCircle{14, 4, 0.9, false},
+		objectCircle{9, 16, 0.8, false},
+		objectCircle{12, 12, 1, false},
+		objectCircle{18, 11, 0.9, false},
+		objectCircle{2, 1, 0.8, false},
+		objectRectangle{17.125, 0.6, 1.75, 0.8, false},
+		objectCircle{7, 2, 0.6, false},
+		objectRectangle{0.5, 9, 3, 2, false},
+		objectCircle{5, 18, 0.5, false},
+		objectCircle{8, 7, 0.7, true},
+	},
+
+	// tile type 1
 }
 
 func (tile *Tile) SetTileEnvironment(tileType int, dx, dy float64) {
 	tile.tileType = tileType
 	for _, p := range environment[tileType] {
-		tile.Environment.Add(p.createPhysical(dx, dy))
+		tile.Environment.Add(p.createEnvObject(dx, dy))
 	}
 }

@@ -23,7 +23,7 @@ type Tile struct {
 	ChildTile      *util.Set[*Tile]
 	ParentTile     *Tile
 	tileType       int
-	Environment    *util.Set[*physical.Physical]
+	Environment    *util.Set[*EnvObject]
 }
 
 func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
@@ -40,12 +40,18 @@ func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
 		},
 		ChildTile:   util.NewSet[*Tile](),
 		ParentTile:  nil,
-		Environment: util.NewSet[*physical.Physical](),
+		Environment: util.NewSet[*EnvObject](),
 	}
 }
 
-func (tile *Tile) SetTileState(tileState int) {
+func (tile *Tile) SetTileState(tileState int) *Tile {
 	tile.TileState = tileState
+	tile.SetTileEnvironment(
+		0,
+		float64(tile.IdxI*cons.CHUNK_LENGTH),
+		float64(tile.IdxJ*cons.CHUNK_LENGTH),
+	)
+	return tile
 }
 
 func (tile *Tile) MakeSendingData() *message.TileState {
