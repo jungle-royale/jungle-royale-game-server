@@ -279,6 +279,7 @@ func (gameManager *GameManager) setClient(client *Client) {
 	if !exists || room == nil {
 		log.Printf("No Room: client is.. %s", client.GameID)
 		gameManager.handleGameEnd(client.GameID)
+		client.close()
 		return
 	}
 	(*room).OnClient(client)
