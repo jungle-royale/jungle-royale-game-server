@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-const BULLET_SPEED = 0.2
+const BULLET_SPEED = 0.5
 const BULLET_RANGE = 20.0
 const BULLET_DAMAGE = 20
 const BULLET_RADIOUS = 0.2
@@ -28,8 +28,6 @@ type Bullet struct {
 	mu             sync.Mutex
 	bulletId       string
 	playerId       string
-	dx             float32
-	dy             float32
 	lastTick       int
 	BulletType     int
 	isValid        bool
@@ -40,28 +38,28 @@ func NewBullet(
 	bulletId string,
 	playerId string,
 	magicType int,
-	startX float32,
-	startY float32,
+	startX float64,
+	startY float64,
 	angle float64,
 ) *Bullet {
-	dx := float32(BULLET_SPEED * math.Sin(angle*(math.Pi/180)))
-	dy := -1 * float32(BULLET_SPEED*math.Cos(angle*(math.Pi/180)))
+	dx := BULLET_SPEED * math.Sin(angle*(math.Pi/180))
+	dy := -1 * BULLET_SPEED * math.Cos(angle*(math.Pi/180))
+	p := physical.NewCircle(startX+dx, startY+dy, BULLET_RADIOUS)
+	p.SetDir(dx, dy)
 	return &Bullet{
 		sync.Mutex{},
 		bulletId,
 		playerId,
-		dx,
-		dy,
 		BULLET_MAX_TICK,
 		magicType,
 		true,
-		physical.NewCircle(startX+dx, startY+dy, BULLET_RADIOUS),
+		p,
 	}
 }
 
 func (bullet *Bullet) CalcGameTick() {
 	bullet.mu.Lock()
-	bullet.physicalObject.Move(bullet.dx, bullet.dy)
+	bullet.physicalObject.Move()
 	bullet.lastTick--
 	if bullet.lastTick <= 0 {
 		bullet.isValid = false
@@ -76,8 +74,8 @@ func (bullet *Bullet) IsValid() bool {
 func (bullet *Bullet) MakeSendingData() *message.BulletState {
 	return &message.BulletState{
 		BulletId: bullet.bulletId,
-		X:        bullet.physicalObject.GetX(),
-		Y:        bullet.physicalObject.GetY(),
+		X:        float32(bullet.physicalObject.GetX()),
+		Y:        float32(bullet.physicalObject.GetY()),
 	}
 }
 

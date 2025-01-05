@@ -24,7 +24,7 @@ type Magic struct {
 	physicalObject physical.Physical
 }
 
-func NewMagicItem(magicType int, x float32, y float32) *Magic {
+func NewMagicItem(magicType int, x, y float64) *Magic {
 	return &Magic{
 		sync.Mutex{},
 		uuid.New().String(),
@@ -45,8 +45,8 @@ func (magic *Magic) MakeSendingData() *message.MagicItemState {
 	return &message.MagicItemState{
 		ItemId:    magic.ItemId,
 		MagicType: int32(magic.magicType),
-		X:         magic.physicalObject.GetX(),
-		Y:         magic.physicalObject.GetY(),
+		X:         float32(magic.physicalObject.GetX()),
+		Y:         float32(magic.physicalObject.GetY()),
 	}
 }
 

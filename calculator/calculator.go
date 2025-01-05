@@ -5,6 +5,7 @@ import (
 	"jungle-royale/object"
 	"jungle-royale/state"
 	"jungle-royale/util"
+	"log"
 	"time"
 )
 
@@ -35,13 +36,13 @@ func (calculator *Calculator) CalcMover(mo object.Mover) {
 	calculator.chunk.AddKey(mo.GetObjectId(), mo.GetObjectType(), addIndexSet)
 }
 
-func (calculator *Calculator) SetLocation(obj object.Object, x, y float32) {
+func (calculator *Calculator) SetLocation(obj object.Object, x, y float64) {
 	(*obj.GetPhysical()).SetCoord(x, y)
 	indexSet := calculator.chunk.getChunkIndexSet(*obj.GetPhysical())
 	calculator.chunk.AddKey(obj.GetObjectId(), obj.GetObjectType(), indexSet)
 }
 
-func (calculator *Calculator) ReLocation(mo object.Mover, x, y float32) {
+func (calculator *Calculator) ReLocation(mo object.Mover, x, y float64) {
 	calculator.CalcMover(mo)
 	(*mo.GetPhysical()).SetCoord(x, y)
 	indexSet := calculator.chunk.getChunkIndexSet(*mo.GetPhysical())
@@ -86,6 +87,21 @@ func (calculator *Calculator) CalcGameTickState() {
 		chunkIndexSet := calculator.chunk.getChunkIndexSet(*player.GetPhysical())
 		chunkIndexSet.Range(func(ci ChunkIndex) bool {
 			objectSet := calculator.chunk.chunkTable[ci.X][ci.Y]
+
+			// player - player
+			objectSet[object.OBJECT_PLAYER].Range(func(s string) bool {
+				if playerId == s {
+					return true
+				}
+				if other, ok := calculator.state.Players.Get(s); ok {
+					if calculator.IsCollider(player, *other) {
+						log.Println("collide")
+						(*player.GetPhysical()).CollideRelocate((*other).GetPhysical())
+						return false
+					}
+				}
+				return true
+			})
 
 			// player - healPack
 			objectSet[object.OBJECT_HEALPACK].Range(func(s string) bool {

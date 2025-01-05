@@ -6,22 +6,26 @@ import (
 )
 
 type Rectangle struct {
-	X      float32
-	Y      float32 // left top
-	Width  float32
-	Length float32
+	X      float64
+	Y      float64 // left top
+	Dx     float64
+	Dy     float64
+	Width  float64
+	Length float64
 }
 
-func NewRectangle(x float32, y float32, width float32, length float32) *Rectangle {
+func NewRectangle(x, y, width, length float64) *Rectangle {
 	return &Rectangle{
 		x,
 		y,
+		0,
+		0,
 		width,
 		length,
 	}
 }
 
-func (rectangle *Rectangle) pointInRectangle(x float32, y float32) bool {
+func (rectangle *Rectangle) pointInRectangle(x, y float64) bool {
 	if rectangle.X < x && x < rectangle.X+rectangle.Width &&
 		rectangle.Y < y && y < rectangle.Y+rectangle.Length {
 		return true
@@ -62,29 +66,46 @@ func (obj *Rectangle) IsCollide(opponent *Physical) bool { // opponent is pointe
 	}
 }
 
-func (rect *Rectangle) Move(dx float32, dy float32) {
-	rect.X += dx
-	rect.Y += dy
+func (rect *Rectangle) Move() {
+	rect.X += rect.Dx
+	rect.Y += rect.Dy
 }
 
-func (rect *Rectangle) GetX() float32 {
+func (rect *Rectangle) GetX() float64 {
 	return rect.X
 }
 
-func (rect *Rectangle) GetY() float32 {
+func (rect *Rectangle) GetY() float64 {
 	return rect.Y
 }
 
-func (rect *Rectangle) SetCoord(x float32, y float32) {
+func (rect *Rectangle) SetCoord(x, y float64) {
 	rect.X = x
 	rect.Y = y
 }
 
-func (rect *Rectangle) IsInRectangle(x, y float32) bool {
+func (rect *Rectangle) IsInRectangle(x, y float64) bool {
 	if rect.X <= x && x <= rect.X+rect.Width &&
 		rect.Y <= y && y <= rect.Y+rect.Length {
 		return true
 	} else {
 		return false
 	}
+}
+
+func (r *Rectangle) GetDx() float64 {
+	return r.Dx
+}
+
+func (r *Rectangle) GetDy() float64 {
+	return r.Dy
+}
+
+func (r *Rectangle) SetDir(dx, dy float64) {
+	r.Dx = dx
+	r.Dy = dy
+}
+
+func (r *Rectangle) CollideRelocate(obj *Physical) {
+
 }
