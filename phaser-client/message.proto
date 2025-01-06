@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package message;
 
+option go_package = "/message";
+
 message Wrapper {
     oneof MessageType {
         ChangeAngle changeAngle = 1;
@@ -50,6 +52,7 @@ message PlayerState {
     float angle = 6;
     int32 dashCoolTime = 7;
     bool isMoved = 8;
+    bool isDashing = 9;
 }
 
 message ChangeBulletState {
@@ -99,14 +102,9 @@ message TileState {
 }
 
 message ChangingState {
-    repeated DoDashState doDashState = 1;
-    repeated HitBulletState hitBulletState = 2;
-    repeated GetItemState getItemState = 3;
-    repeated PlayerDeadState playerDeadState = 4;
-}
-
-message DoDashState {
-    string playerId = 1;
+    repeated HitBulletState hitBulletState = 1;
+    repeated GetItemState getItemState = 2;
+    repeated PlayerDeadState playerDeadState = 3;
 }
 
 message HitBulletState {

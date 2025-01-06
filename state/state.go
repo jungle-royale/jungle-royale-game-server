@@ -97,9 +97,7 @@ func (state *State) ChangeAngle(clientId string, msg *message.ChangeAngle) {
 
 func (state *State) DoDash(clientId string, msg *message.DoDash) {
 	if player, exists := state.Players.Get(clientId); exists {
-		if (*player).DoDash() {
-			state.ChangingState.DoDashStateList.Add((*player).MakeDoDashState())
-		}
+		(*player).DoDash()
 	}
 }
 

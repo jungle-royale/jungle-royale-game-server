@@ -13,8 +13,8 @@ import (
 const PLAYER_SPEED = 0.07
 
 // const PLAYER_SPEED = 1
-const DASH_SPEED = 0.3
-const DASH_TICK = 6
+const DASH_SPEED = 0.2
+const DASH_TICK = 12
 const DASH_COOLTIME = 10 // 0.1 sec
 const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
@@ -150,6 +150,7 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 		Angle:        float32(player.angle),
 		DashCoolTime: int32(player.dashCoolTime),
 		IsMoved:      player.isMoveing,
+		IsDashing:    player.isDashing,
 	}
 }
 
@@ -244,8 +245,4 @@ func (player *Player) GetObjectType() int {
 
 func (player *Player) GetObjectId() string {
 	return player.id
-}
-
-func (player *Player) MakeDoDashState() DoDashState {
-	return NewDoDashState(player.id)
 }
