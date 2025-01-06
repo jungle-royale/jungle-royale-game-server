@@ -25,12 +25,12 @@ func NewClient(
 ) *Client {
 	id := uuid.New().String()
 	return &Client{
-		sync.Mutex{},
-		ClientId(id),
-		gameId,
-		serverClientId,
-		conn,
-		sync.Mutex{},
+		mu:             sync.Mutex{},
+		ID:             ClientId(id),
+		GameID:         gameId,
+		serverClientId: serverClientId,
+		conn:           conn,
+		connMu:         sync.Mutex{},
 	}
 }
 

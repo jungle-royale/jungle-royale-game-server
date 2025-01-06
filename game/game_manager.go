@@ -105,6 +105,9 @@ func (gameManager *GameManager) Listen() {
 	})
 
 	http.HandleFunc("/room", func(w http.ResponseWriter, r *http.Request) {
+
+		log.Printf("%s", r.URL.String())
+
 		var upgrader = websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
@@ -136,7 +139,7 @@ func (gameManager *GameManager) Listen() {
 			serverClientId = strconv.Itoa(gameManager.debugClientCount)
 			gameManager.debugClientCount += 1
 		} else {
-			gameId := r.URL.Query().Get("roomId")
+			gameId = r.URL.Query().Get("roomId")
 			if gameId == "" {
 				http.Error(w, "Missing gameId query parameter", http.StatusBadRequest)
 				return
@@ -263,7 +266,7 @@ func (gameManager *GameManager) CreateGame(
 	)
 	newGame.SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
 	gameManager.games.Store(gameId, newGame)
-	log.Printf("New Game Room: %s", gameId)
+	log.Printf("New Game Room: %s, %d", gameId, gameManager.games.Length())
 }
 
 func (gameManager *GameManager) handleGameStart(gameId GameId) {
@@ -271,7 +274,7 @@ func (gameManager *GameManager) handleGameStart(gameId GameId) {
 		return
 	}
 	gameManager.sendStartMessage(gameId)
-	log.Printf("Start Game: %d", gameId)
+	log.Printf("Start Game: %s", gameId)
 }
 
 func (gameManager *GameManager) handleGameEnd(gameId GameId) {
@@ -287,7 +290,7 @@ func (gameManager *GameManager) handleGameEnd(gameId GameId) {
 func (gameManager *GameManager) setClient(client *Client) {
 	room, exists := gameManager.games.Get(client.GameID)
 	if !exists || room == nil {
-		log.Printf("No Room: client is.. %s", client.GameID)
+		log.Printf("No Room: client is.. %s, %d", client.GameID, gameManager.games.Length())
 		gameManager.handleGameEnd(client.GameID)
 		client.close()
 		return
