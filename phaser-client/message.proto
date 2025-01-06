@@ -116,6 +116,8 @@ message HitBulletState {
 
     string bulletId = 2;
     string objectId = 3;
+    float x = 4;
+    float y = 5;
 }
 
 message GetItemState {
@@ -125,6 +127,9 @@ message GetItemState {
     // 1: healpack
     // 2: stone magic
     // 3: fire magic
+
+    float x = 4;
+    float y = 5;
 }
 
 message PlayerDeadState {

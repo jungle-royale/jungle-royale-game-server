@@ -77,16 +77,20 @@ type HitBulletState struct {
 	bulletId   string
 	objectType int
 	objectId   string
+	X          float64
+	Y          float64
 }
 
-func NewHitBulletState(bulletId, objectId string, objectType int) HitBulletState {
-	return HitBulletState{bulletId, objectType, objectId}
+func NewHitBulletState(bulletId, objectId string, objectType int, x, y float64) HitBulletState {
+	return HitBulletState{bulletId, objectType, objectId, x, y}
 }
 
 func (hbs *HitBulletState) MakeSendingData() *message.HitBulletState {
 	return &message.HitBulletState{
 		BulletId: hbs.bulletId,
 		ObjectId: hbs.objectId,
+		X:        float32(hbs.X),
+		Y:        float32(hbs.Y),
 	}
 }
 
@@ -101,10 +105,12 @@ type GetItemState struct {
 	itemId   string
 	playerId string
 	itemType int
+	X        float64
+	Y        float64
 }
 
-func NewGetItemState(itemId, playerId string, itemType int) GetItemState {
-	return GetItemState{itemId, playerId, itemType}
+func NewGetItemState(itemId, playerId string, itemType int, x, y float64) GetItemState {
+	return GetItemState{itemId, playerId, itemType, x, y}
 }
 
 func (gis *GetItemState) MakeSendingData() *message.GetItemState {
@@ -112,6 +118,8 @@ func (gis *GetItemState) MakeSendingData() *message.GetItemState {
 		ItemId:   gis.itemId,
 		PlayerId: gis.playerId,
 		ItemType: int32(gis.itemType),
+		X:        float32(gis.X),
+		Y:        float32(gis.Y),
 	}
 }
 

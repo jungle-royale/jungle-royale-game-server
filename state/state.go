@@ -6,7 +6,6 @@ import (
 	"jungle-royale/object"
 	"jungle-royale/util"
 	"math"
-	"math/rand/v2"
 
 	"github.com/google/uuid"
 )
@@ -57,7 +56,8 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 		state.Tiles[i] = make([]*object.Tile, chunkNum)
 		for j := 0; j < chunkNum; j++ {
 			tildId := uuid.New().String()
-			k := rand.IntN(2)
+			// k := rand.IntN(object.TILE_TYPE_NUM)
+			k := 1
 			newTile := object.NewTile(
 				tildId,
 				float64(i*cons.CHUNK_LENGTH),

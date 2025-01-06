@@ -129,6 +129,8 @@ func (calculator *Calculator) CalcGameTickState() {
 								(*healPack).GetObjectId(),
 								player.GetObjectId(),
 								object.ITEM_HEALPACK,
+								(*(*healPack).GetPhysical()).GetX(),
+								(*(*healPack).GetPhysical()).GetY(),
 							),
 						)
 						return false
