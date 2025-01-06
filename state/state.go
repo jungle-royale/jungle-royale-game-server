@@ -57,14 +57,14 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 		for j := 0; j < chunkNum; j++ {
 			tildId := uuid.New().String()
 			// k := rand.IntN(object.TILE_TYPE_NUM)
-			k := 1
+			tileType := 1
 			newTile := object.NewTile(
 				tildId,
 				float64(i*cons.CHUNK_LENGTH),
 				float64(j*cons.CHUNK_LENGTH),
 				i,
 				j,
-			).SetTileState(k)
+			).SetTileState(object.TILE_TYPE_NUM).SetTileType(tileType)
 			state.Tiles[i][j] = newTile
 		}
 	}
@@ -97,9 +97,7 @@ func (state *State) ChangeAngle(clientId string, msg *message.ChangeAngle) {
 
 func (state *State) DoDash(clientId string, msg *message.DoDash) {
 	if player, exists := state.Players.Get(clientId); exists {
-		if (*player).DoDash() {
-			state.ChangingState.DoDashStateList.Add((*player).MakeDoDashState())
-		}
+		(*player).DoDash()
 	}
 }
 

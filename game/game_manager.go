@@ -271,6 +271,7 @@ func (gameManager *GameManager) handleGameStart(gameId GameId) {
 		return
 	}
 	gameManager.sendStartMessage(gameId)
+	log.Printf("Start Game: %d", gameId)
 }
 
 func (gameManager *GameManager) handleGameEnd(gameId GameId) {
@@ -279,6 +280,7 @@ func (gameManager *GameManager) handleGameEnd(gameId GameId) {
 	} else {
 		gameManager.games.Delete(gameId)
 		gameManager.sendEndMessage(gameId)
+		log.Printf("End Game: %s , (game counts: %d)", gameId, gameManager.games.Length())
 	}
 }
 
