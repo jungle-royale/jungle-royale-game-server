@@ -81,6 +81,15 @@ var environment = [][]objectData{
 	},
 
 	// tile type 1
+	{
+		objectRectangle{10.5, 17.0, 3.0, 2.0, false},
+		objectCircle{15.0, 13.0, 1.0, false},
+		objectCircle{4.0, 15.0, 1.0, false},
+		objectCircle{3.0, 5.0, 0.8, false},
+		objectCircle{17.0, 4.0, 1.0, false},
+		objectCircle{10.0, 8.0, 0.6, false},
+		objectRectangle{6.5, 7.94, 1.7, 0.8, true},
+	},
 }
 
 func (tile *Tile) SetTileEnvironment(tileType int, dx, dy float64) {

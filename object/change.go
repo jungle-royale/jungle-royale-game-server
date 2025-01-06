@@ -6,6 +6,7 @@ import (
 )
 
 type ChangingState struct {
+	DoDashStateList     *util.Set[DoDashState]
 	HitBulletStateList  *util.Set[HitBulletState]
 	GetItemStateList    *util.Set[GetItemState]
 	PlayerDeadStateList *util.Set[PlayerDeadState]
@@ -13,6 +14,7 @@ type ChangingState struct {
 
 func NewChangingState() *ChangingState {
 	return &ChangingState{
+		DoDashStateList:     util.NewSyncSet[DoDashState](),
 		HitBulletStateList:  util.NewSyncSet[HitBulletState](),
 		GetItemStateList:    util.NewSyncSet[GetItemState](),
 		PlayerDeadStateList: util.NewSyncSet[PlayerDeadState](),
@@ -21,9 +23,16 @@ func NewChangingState() *ChangingState {
 
 func (cs *ChangingState) MakeSendingData() *message.ChangingState {
 
+	DoDashStateList := make([]*message.DoDashState, 0)
 	HitBulletStateList := make([]*message.HitBulletState, 0)
 	GetItemStateList := make([]*message.GetItemState, 0)
 	playerDeadStateList := make([]*message.PlayerDeadState, 0)
+
+	cs.DoDashStateList.Range(func(dds DoDashState) bool {
+		DoDashStateList = append(DoDashStateList, dds.MakeSendingData())
+		cs.DoDashStateList.Remove(dds)
+		return true
+	})
 
 	cs.HitBulletStateList.Range(func(hbs HitBulletState) bool {
 		HitBulletStateList = append(HitBulletStateList, hbs.MakeSendingData())
@@ -47,6 +56,20 @@ func (cs *ChangingState) MakeSendingData() *message.ChangingState {
 		HitBulletState:  HitBulletStateList,
 		GetItemState:    GetItemStateList,
 		PlayerDeadState: playerDeadStateList,
+	}
+}
+
+type DoDashState struct {
+	playerId string
+}
+
+func NewDoDashState(playerId string) DoDashState {
+	return DoDashState{playerId: playerId}
+}
+
+func (dds *DoDashState) MakeSendingData() *message.DoDashState {
+	return &message.DoDashState{
+		PlayerId: dds.playerId,
 	}
 }
 

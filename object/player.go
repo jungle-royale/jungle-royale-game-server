@@ -73,7 +73,7 @@ func NewPlayer(id string, x, y float64) *Player {
 }
 
 func (player *Player) CreateBullet() *Bullet {
-	if player.ShootingCoolTime > 0 {
+	if player.ShootingCoolTime > 0 || player.isDashing {
 		return nil
 	} else {
 		player.ShootingCoolTime = SHOOTING_COOLTIME
@@ -149,6 +149,7 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 		MagicType:    int32(player.MagicType),
 		Angle:        float32(player.angle),
 		DashCoolTime: int32(player.dashCoolTime),
+		IsMoved:      player.isMoveing,
 	}
 }
 
@@ -216,7 +217,7 @@ func (player *Player) GetMagic(magicType int) {
 	player.mu.Unlock()
 }
 
-func (player *Player) DoDash() {
+func (player *Player) DoDash() bool {
 	if !player.isDashing && player.dashCoolTime == 0 {
 		player.mu.Lock()
 		player.isDashing = true
@@ -227,6 +228,9 @@ func (player *Player) DoDash() {
 		)
 		player.dashTime = DASH_TICK
 		player.mu.Unlock()
+		return true
+	} else {
+		return false
 	}
 }
 
@@ -240,4 +244,8 @@ func (player *Player) GetObjectType() int {
 
 func (player *Player) GetObjectId() string {
 	return player.id
+}
+
+func (player *Player) MakeDoDashState() DoDashState {
+	return NewDoDashState(player.id)
 }

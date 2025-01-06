@@ -6,6 +6,7 @@ import (
 	"jungle-royale/object"
 	"jungle-royale/util"
 	"math"
+	"math/rand/v2"
 
 	"github.com/google/uuid"
 )
@@ -56,13 +57,14 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 		state.Tiles[i] = make([]*object.Tile, chunkNum)
 		for j := 0; j < chunkNum; j++ {
 			tildId := uuid.New().String()
+			k := rand.IntN(2)
 			newTile := object.NewTile(
 				tildId,
 				float64(i*cons.CHUNK_LENGTH),
 				float64(j*cons.CHUNK_LENGTH),
 				i,
 				j,
-			).SetTileState(0)
+			).SetTileState(k)
 			state.Tiles[i][j] = newTile
 		}
 	}
@@ -95,7 +97,9 @@ func (state *State) ChangeAngle(clientId string, msg *message.ChangeAngle) {
 
 func (state *State) DoDash(clientId string, msg *message.DoDash) {
 	if player, exists := state.Players.Get(clientId); exists {
-		(*player).DoDash()
+		if (*player).DoDash() {
+			state.ChangingState.DoDashStateList.Add((*player).MakeDoDashState())
+		}
 	}
 }
 
