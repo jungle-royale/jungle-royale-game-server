@@ -92,18 +92,19 @@ message TileState {
     string tileId = 1;
     float x = 2;
     float y = 3;
-    int32 tileState = 4;
+    int32 tileType = 4;
+    int32 tileState = 5;
     // 0: tile normal
     // 1: tile dangerous (tile fall in 5 sec)
 }
 
 message ChangingState {
-    repeated HeatBulletState heatBulletState = 1;
+    repeated HitBulletState hitBulletState = 1;
     repeated GetItemState getItemState = 2;
     repeated PlayerDeadState playerDeadState = 3;
 }
 
-message HeatBulletState {
+message HitBulletState {
     string bulletId = 1;
     string playerId = 2;
 }

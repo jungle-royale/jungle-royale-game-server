@@ -195,15 +195,15 @@ func (calculator *Calculator) CalcGameTickState() {
 				if player, ok := calculator.state.Players.Get(s); ok {
 					if calculator.IsCollider(bullet, *player) {
 						if calculator.state.GameState == state.Playing {
-							if (*player).HeatedBullet(bullet) {
+							if (*player).HitedBullet(bullet) {
 								calculator.state.Bullets.Delete(bulletId)
 								calculator.chunk.RemoveKey(
 									bulletId,
 									object.OBJECT_BULLET,
 									chunkIndexSet,
 								)
-								calculator.state.ChangingState.HeatBulletStateList.Add(
-									bullet.MakeHeatBulletState((*player).GetObjectId()),
+								calculator.state.ChangingState.HitBulletStateList.Add(
+									bullet.MakeHitBulletState((*player).GetObjectId()),
 								)
 								return false
 							}

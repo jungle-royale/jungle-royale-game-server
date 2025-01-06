@@ -152,7 +152,7 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 	}
 }
 
-func (player *Player) HeatedBullet(bullet *Bullet) bool {
+func (player *Player) HitedBullet(bullet *Bullet) bool {
 
 	if bullet.playerId == player.id {
 		return false

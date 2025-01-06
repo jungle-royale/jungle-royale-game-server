@@ -91,6 +91,6 @@ func (bullet *Bullet) GetObjectId() string {
 	return bullet.bulletId
 }
 
-func (bullet *Bullet) MakeHeatBulletState(heatedPlayerId string) HeatBulletState {
-	return NewHeatBulletState(bullet.bulletId, heatedPlayerId)
+func (bullet *Bullet) MakeHitBulletState(hitedPlayerId string) HitBulletState {
+	return NewHitBulletState(bullet.bulletId, hitedPlayerId)
 }

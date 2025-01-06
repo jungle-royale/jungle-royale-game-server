@@ -38,9 +38,9 @@ func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
 			Width:  cons.CHUNK_LENGTH,
 			Length: cons.CHUNK_LENGTH,
 		},
-		ChildTile:   util.NewSet[*Tile](),
+		ChildTile:   util.NewSyncSet[*Tile](),
 		ParentTile:  nil,
-		Environment: util.NewSet[*EnvObject](),
+		Environment: util.NewSyncSet[*EnvObject](),
 	}
 }
 
@@ -58,6 +58,7 @@ func (tile *Tile) MakeSendingData() *message.TileState {
 	return &message.TileState{
 		TileId:    tile.TileId,
 		TileState: int32(tile.TileState),
+		TileType:  int32(tile.tileType),
 		X:         float32(tile.PhysicalObject.X),
 		Y:         float32(tile.PhysicalObject.Y),
 	}

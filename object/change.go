@@ -6,14 +6,14 @@ import (
 )
 
 type ChangingState struct {
-	HeatBulletStateList *util.Set[HeatBulletState]
+	HitBulletStateList  *util.Set[HitBulletState]
 	GetItemStateList    *util.Set[GetItemState]
 	PlayerDeadStateList *util.Set[PlayerDeadState]
 }
 
 func NewChangingState() *ChangingState {
 	return &ChangingState{
-		HeatBulletStateList: util.NewSyncSet[HeatBulletState](),
+		HitBulletStateList:  util.NewSyncSet[HitBulletState](),
 		GetItemStateList:    util.NewSyncSet[GetItemState](),
 		PlayerDeadStateList: util.NewSyncSet[PlayerDeadState](),
 	}
@@ -21,13 +21,13 @@ func NewChangingState() *ChangingState {
 
 func (cs *ChangingState) MakeSendingData() *message.ChangingState {
 
-	HeatBulletStateList := make([]*message.HeatBulletState, 0)
+	HitBulletStateList := make([]*message.HitBulletState, 0)
 	GetItemStateList := make([]*message.GetItemState, 0)
 	playerDeadStateList := make([]*message.PlayerDeadState, 0)
 
-	cs.HeatBulletStateList.Range(func(hbs HeatBulletState) bool {
-		HeatBulletStateList = append(HeatBulletStateList, hbs.MakeSendingData())
-		cs.HeatBulletStateList.Remove(hbs)
+	cs.HitBulletStateList.Range(func(hbs HitBulletState) bool {
+		HitBulletStateList = append(HitBulletStateList, hbs.MakeSendingData())
+		cs.HitBulletStateList.Remove(hbs)
 		return true
 	})
 
@@ -44,23 +44,23 @@ func (cs *ChangingState) MakeSendingData() *message.ChangingState {
 	})
 
 	return &message.ChangingState{
-		HeatBulletState: HeatBulletStateList,
+		HitBulletState:  HitBulletStateList,
 		GetItemState:    GetItemStateList,
 		PlayerDeadState: playerDeadStateList,
 	}
 }
 
-type HeatBulletState struct {
+type HitBulletState struct {
 	bulletId string
 	playerId string
 }
 
-func NewHeatBulletState(bulletId, playerId string) HeatBulletState {
-	return HeatBulletState{bulletId, playerId}
+func NewHitBulletState(bulletId, playerId string) HitBulletState {
+	return HitBulletState{bulletId, playerId}
 }
 
-func (hbs *HeatBulletState) MakeSendingData() *message.HeatBulletState {
-	return &message.HeatBulletState{
+func (hbs *HitBulletState) MakeSendingData() *message.HitBulletState {
+	return &message.HitBulletState{
 		BulletId: hbs.bulletId,
 		PlayerId: hbs.playerId,
 	}
