@@ -57,14 +57,14 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 		for j := 0; j < chunkNum; j++ {
 			tildId := uuid.New().String()
 			// k := rand.IntN(object.TILE_TYPE_NUM)
-			k := 1
+			tileType := 1
 			newTile := object.NewTile(
 				tildId,
 				float64(i*cons.CHUNK_LENGTH),
 				float64(j*cons.CHUNK_LENGTH),
 				i,
 				j,
-			).SetTileState(k)
+			).SetTileState(object.TILE_TYPE_NUM).SetTileType(tileType)
 			state.Tiles[i][j] = newTile
 		}
 	}
