@@ -92,7 +92,13 @@ func (bullet *Bullet) GetObjectId() string {
 }
 
 func (bullet *Bullet) MakeHitBulletState(objectType int, objectId string) HitBulletState {
-	return NewHitBulletState(bullet.bulletId, objectId, objectType)
+	return NewHitBulletState(
+		bullet.bulletId,
+		objectId,
+		objectType,
+		bullet.physicalObject.GetX(),
+		bullet.physicalObject.GetY(),
+	)
 }
 
 func (bullet *Bullet) IsValidHit(playerId string) bool {

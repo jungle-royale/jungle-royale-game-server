@@ -60,9 +60,21 @@ func (magic *Magic) GetObjectId() string {
 
 func (magic *Magic) MakeGetItemState(playerId string) GetItemState {
 	if magic.magicType == STONE_MAGIC {
-		return NewGetItemState(magic.ItemId, playerId, ITEM_STONE_MAGIC)
+		return NewGetItemState(
+			magic.ItemId,
+			playerId,
+			ITEM_STONE_MAGIC,
+			magic.physicalObject.GetX(),
+			magic.physicalObject.GetY(),
+		)
 	} else if magic.magicType == FIRE_MAGIC {
-		return NewGetItemState(magic.ItemId, playerId, ITEM_FIRE_MAGIC)
+		return NewGetItemState(
+			magic.ItemId,
+			playerId,
+			ITEM_FIRE_MAGIC,
+			magic.physicalObject.GetX(),
+			magic.physicalObject.GetY(),
+		)
 	}
 	return GetItemState{}
 }

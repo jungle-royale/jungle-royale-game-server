@@ -6,8 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const TILE_TYPE_NUM = 0
-
 type objectData interface {
 	createEnvObject(dx, dy float64) *EnvObject
 }
@@ -24,6 +22,7 @@ func (c objectCircle) createEnvObject(dx, dy float64) *EnvObject {
 	return &EnvObject{
 		objId:          uuid.New().String(),
 		physicalObject: p,
+		IsShort:        c.isShort,
 	}
 }
 
@@ -40,6 +39,7 @@ func (r objectRectangle) createEnvObject(dx, dy float64) *EnvObject {
 	return &EnvObject{
 		objId:          uuid.New().String(),
 		physicalObject: p,
+		IsShort:        r.isShort,
 	}
 }
 
@@ -61,9 +61,33 @@ func (eo *EnvObject) GetPhysical() *physical.Physical {
 	return &eo.physicalObject
 }
 
+const TILE_TYPE_NUM = 3
+
 // [tile type][number of objects]
 var environment = [][]objectData{
+
 	// tile type 0
+	{
+		objectRectangle{-0.5, -2.25, 1.0, 0.5, false},
+		objectRectangle{0.5, -2.25, 1.0, 0.5, false},
+		objectCircle{0.0, 0.0, 1.4, true},
+		objectCircle{-7.0, -6.0, 0.6, false},
+		objectCircle{3.0, 8.0, 1.5, false},
+		objectCircle{6.0, -2., 1.3, false},
+		objectRectangle{5.75, 7.5, 2.5, 1.0, false},
+		objectCircle{-2.0, 7.0, 1.7, false},
+		objectRectangle{-8.25, 7.5, 2.5, 1.0, false},
+		objectCircle{5.0, -1.0, 0.2, false},
+		objectCircle{1.0, 9.0, 0.2, false},
+		objectCircle{8.0, -1.0, 0.2, false},
+		objectCircle{-8.0, 2.0, 0.2, false},
+		objectCircle{-8.0, -3.0, 0.2, false},
+		objectCircle{8.0, 8.0, 0.2, false},
+		objectCircle{-8.0, 8.0, 0.2, false},
+		objectCircle{-2.0, -8.0, 0.2, false},
+	},
+
+	// tile type 1
 	{
 		objectCircle{2, 18, 1, false},
 		objectCircle{17, 18, 1, false},
@@ -75,12 +99,13 @@ var environment = [][]objectData{
 		objectCircle{2, 1, 0.8, false},
 		objectRectangle{17.125, 0.6, 1.75, 0.8, false},
 		objectCircle{7, 2, 0.6, false},
-		objectRectangle{0.5, 9, 3, 2, false},
+		objectRectangle{1, 9, 2, 2, false},
+		objectRectangle{3, 9, 1, 2, true},
 		objectCircle{5, 18, 0.5, false},
 		objectCircle{8, 7, 0.7, true},
 	},
 
-	// tile type 1
+	// tile type 2
 	{
 		objectRectangle{10.5, 17.0, 3.0, 2.0, false},
 		objectCircle{15.0, 13.0, 1.0, false},
