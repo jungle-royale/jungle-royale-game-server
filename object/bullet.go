@@ -91,6 +91,14 @@ func (bullet *Bullet) GetObjectId() string {
 	return bullet.bulletId
 }
 
-func (bullet *Bullet) MakeHitBulletState(hitedPlayerId string) HitBulletState {
-	return NewHitBulletState(bullet.bulletId, hitedPlayerId)
+func (bullet *Bullet) MakeHitBulletState(objectType int, objectId string) HitBulletState {
+	return NewHitBulletState(bullet.bulletId, objectId, objectType)
+}
+
+func (bullet *Bullet) IsValidHit(playerId string) bool {
+	if bullet.playerId != playerId {
+		return true
+	} else {
+		return false
+	}
 }

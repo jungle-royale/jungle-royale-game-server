@@ -339,7 +339,8 @@ func (game *Game) SetPlayer(client *Client) {
 
 	// send GameInit message
 	gameInit := &message.GameInit{
-		Id: clientId,
+		Id:           clientId,
+		MinPlayerNum: int32(game.minPlayerNum),
 	}
 	data, err := proto.Marshal(&message.Wrapper{
 		MessageType: &message.Wrapper_GameInit{

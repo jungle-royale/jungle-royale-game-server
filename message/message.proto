@@ -20,6 +20,7 @@ message Wrapper {
 // server → client : init message
 message GameInit {
     string id = 1;  // player id
+    int32 minPlayerNum = 2;
 }
 
 // client → server : changing state
@@ -105,8 +106,12 @@ message ChangingState {
 }
 
 message HitBulletState {
-    string bulletId = 1;
-    string playerId = 2;
+    int32 objectType = 1;
+    // 0: player
+    // 4: environment object
+
+    string bulletId = 2;
+    string objectId = 3;
 }
 
 message GetItemState {
