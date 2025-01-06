@@ -47,7 +47,7 @@ func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
 func (tile *Tile) SetTileState(tileState int) *Tile {
 	tile.TileState = tileState
 	tile.SetTileEnvironment(
-		0,
+		tileState,
 		float64(tile.IdxI*cons.CHUNK_LENGTH),
 		float64(tile.IdxJ*cons.CHUNK_LENGTH),
 	)

@@ -80,7 +80,9 @@ func (calculator *Calculator) CalcGameTickState() {
 		// create bullet
 		if player.IsShooting && player.ShootingCoolTime <= 0 {
 			newBullet := player.CreateBullet()
-			calculator.state.Bullets.Store(newBullet.GetObjectId(), newBullet)
+			if newBullet != nil {
+				calculator.state.Bullets.Store(newBullet.GetObjectId(), newBullet)
+			}
 		}
 
 		chunkIndexSet := calculator.chunk.getChunkIndexSet(*player.GetPhysical())

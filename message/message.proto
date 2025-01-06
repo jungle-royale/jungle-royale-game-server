@@ -51,6 +51,7 @@ message PlayerState {
     int32 magicType = 5;
     float angle = 6;
     int32 dashCoolTime = 7;
+    bool isMoved = 8;
 }
 
 message ChangeBulletState {
@@ -100,9 +101,14 @@ message TileState {
 }
 
 message ChangingState {
-    repeated HitBulletState hitBulletState = 1;
-    repeated GetItemState getItemState = 2;
-    repeated PlayerDeadState playerDeadState = 3;
+    repeated DoDashState doDashState = 1;
+    repeated HitBulletState hitBulletState = 2;
+    repeated GetItemState getItemState = 3;
+    repeated PlayerDeadState playerDeadState = 4;
+}
+
+message DoDashState {
+    string playerId = 1;
 }
 
 message HitBulletState {
