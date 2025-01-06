@@ -51,18 +51,19 @@ func (cs *ChangingState) MakeSendingData() *message.ChangingState {
 }
 
 type HitBulletState struct {
-	bulletId string
-	playerId string
+	bulletId   string
+	objectType int
+	objectId   string
 }
 
-func NewHitBulletState(bulletId, playerId string) HitBulletState {
-	return HitBulletState{bulletId, playerId}
+func NewHitBulletState(bulletId, objectId string, objectType int) HitBulletState {
+	return HitBulletState{bulletId, objectType, objectId}
 }
 
 func (hbs *HitBulletState) MakeSendingData() *message.HitBulletState {
 	return &message.HitBulletState{
 		BulletId: hbs.bulletId,
-		PlayerId: hbs.playerId,
+		ObjectId: hbs.objectId,
 	}
 }
 

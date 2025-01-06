@@ -193,21 +193,20 @@ func (calculator *Calculator) CalcGameTickState() {
 			// bullet - player
 			objectSet[object.OBJECT_PLAYER].Range(func(s string) bool {
 				if player, ok := calculator.state.Players.Get(s); ok {
-					if calculator.IsCollider(bullet, *player) {
+					if calculator.IsCollider(bullet, *player) && bullet.IsValidHit((*player).GetObjectId()) {
+						calculator.state.Bullets.Delete(bulletId)
+						calculator.chunk.RemoveKey(
+							bulletId,
+							object.OBJECT_BULLET,
+							chunkIndexSet,
+						)
+						calculator.state.ChangingState.HitBulletStateList.Add(
+							bullet.MakeHitBulletState(object.OBJECT_PLAYER, (*player).GetObjectId()),
+						)
 						if calculator.state.GameState == state.Playing {
-							if (*player).HitedBullet(bullet) {
-								calculator.state.Bullets.Delete(bulletId)
-								calculator.chunk.RemoveKey(
-									bulletId,
-									object.OBJECT_BULLET,
-									chunkIndexSet,
-								)
-								calculator.state.ChangingState.HitBulletStateList.Add(
-									bullet.MakeHitBulletState((*player).GetObjectId()),
-								)
-								return false
-							}
+							(*player).HitedBullet(bullet)
 						}
+						return false
 					}
 				}
 				return true
@@ -221,6 +220,9 @@ func (calculator *Calculator) CalcGameTickState() {
 						bulletId,
 						object.OBJECT_BULLET,
 						chunkIndexSet,
+					)
+					calculator.state.ChangingState.HitBulletStateList.Add(
+						bullet.MakeHitBulletState(object.OBJECT_ENVIRONMENT, (*eo).GetObjectId()),
 					)
 					return false
 				}
