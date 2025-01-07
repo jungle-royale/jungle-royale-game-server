@@ -1,10 +1,10 @@
 config:
-  target: "ws://localhost:8000/room?roomId=test&clientId=test"  # WebSocket 서버 주소
+  target: "ws://localhost:8000/room?roomId=W7JoU7n2rMjuGkwGO-N-f3m0lNPj5gOCVneyzGfcEPM&clientId=UJyws7TIjpvRqs5d47HocwPyQuRka6y7zuBKzZXM4OY"  # WebSocket 서버 주소
   phases:
     - duration: 1
-      arrivalRate: 99              # 초당 1명의 사용자 연결
+      arrivalRate: 1              # 초당 1명의 사용자 연결
   processor: "./tester.js"        # JavaScript로 메시지 생성 위임
 scenarios:
   - engine: "ws"
     flow:
-      - think: 100
+      - think: 120

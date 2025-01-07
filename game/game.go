@@ -6,6 +6,7 @@ import (
 	"jungle-royale/message"
 	"jungle-royale/object"
 	"jungle-royale/state"
+	"jungle-royale/statistic"
 	"jungle-royale/util"
 	"log"
 	"math"
@@ -25,29 +26,48 @@ type Game struct {
 	serverClientTable *util.Map[string, ClientId]
 	alertGameStart    func() // 게임 시작을 알림
 	alertGameEnd      func() // 게임 종료를 알림
+	gameLogger        *statistic.Logger
 }
 
 // playing time - second
-func NewGame(
+func NewGame() *Game {
+	// playing time - sec
+	gameState := state.NewState()
+	logger := statistic.NewGameLogger()
+	game := &Game{
+		playerNum:         0,
+		state:             gameState,
+		calculator:        nil,
+		clients:           util.NewSyncMap[ClientId, *Client](),
+		serverClientTable: util.NewSyncMap[string, ClientId](),
+		gameLogger:        logger,
+	}
+	game.calculator = calculator.NewCalculator(
+		gameState,
+		func(clientId string, rank, kill int) {
+			game.MakeLog(clientId, rank, kill)
+		},
+	)
+	return game
+}
+
+func (game *Game) SetGame(
 	minPlayerNum int,
 	playingTime int,
 	startHandler func(),
 	endHandler func(),
 ) *Game {
-	// playing time - sec
-	gameState := state.NewState()
-	game := &Game{
-		minPlayerNum:      minPlayerNum,
-		playingTime:       playingTime,
-		playerNum:         0,
-		state:             gameState,
-		calculator:        calculator.NewCalculator(gameState),
-		clients:           util.NewSyncMap[ClientId, *Client](),
-		serverClientTable: util.NewSyncMap[string, ClientId](),
-		alertGameStart:    startHandler,
-		alertGameEnd:      endHandler,
-	}
+	game.minPlayerNum = minPlayerNum
+	game.playingTime = playingTime
+	game.alertGameStart = startHandler
+	game.alertGameEnd = endHandler
 	return game
+}
+
+func (game *Game) MakeLog(clientId string, rank, kill int) {
+	if ci, ok := game.clients.Get(ClientId(clientId)); ok {
+		game.gameLogger.AddLog((*ci).serverClientId, rank, kill)
+	}
 }
 
 func (game *Game) SetReadyStatus() *Game {
@@ -300,8 +320,8 @@ func (game *Game) OnClient(client *Client) {
 func (game *Game) OnClose(client *Client) {
 	game.clients.Delete(client.ID)
 	if game.clients.Length() == 0 {
-		log.Print("clinet's count zero")
-		game.alertGameEnd() // TODO: 게임 정보 전송
+		log.Println("clinet's count zero")
+		game.alertGameEnd()
 	}
 }
 
@@ -372,4 +392,12 @@ func (game *Game) broadcast(data []byte) {
 		}
 		return true
 	})
+}
+
+func (game *Game) IsPlaying() bool {
+	if game.state.GameState == state.Empty {
+		return false
+	} else {
+		return true
+	}
 }

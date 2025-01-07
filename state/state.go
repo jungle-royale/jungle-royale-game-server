@@ -13,9 +13,11 @@ import (
 
 // gamestate
 const (
-	Waiting = iota
+	Empty = iota
+	Waiting
 	Counting
 	Playing
+	End
 )
 
 type State struct {
@@ -30,10 +32,12 @@ type State struct {
 	MaxCoord      float32
 	LastGameTick  int
 	ChangingState *object.ChangingState
+	saveRankFunc  func(clientId string, rank, kill int)
 }
 
 func NewState() *State {
 	return &State{
+		GameState:     Empty,
 		Players:       util.NewSyncMap[string, *object.Player](),
 		Bullets:       util.NewSyncMap[string, *object.Bullet](),
 		HealPacks:     util.NewSyncMap[string, *object.HealPack](),
