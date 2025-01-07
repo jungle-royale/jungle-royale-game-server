@@ -28,12 +28,8 @@ const (
 	DYING_FALL
 )
 
-func (pd *PlayerDeadState) Kill() {
-	pd.KillNum++
-}
-
 type Player struct {
-	mu                 sync.Mutex
+	Mu                 sync.Mutex
 	id                 string
 	dir                float64 // (dx, dy)
 	angle              float64 // degree
@@ -50,6 +46,7 @@ type Player struct {
 	ShootingCoolTime   int
 	FireDamageTickTime int
 	FireDamageCount    int
+	FireDamageOwner    string // 불 틱데미지 입힌사람
 }
 
 func NewPlayer(id string, x, y float64) *Player {
@@ -72,6 +69,7 @@ func NewPlayer(id string, x, y float64) *Player {
 		0,
 		0,
 		0,
+		"",
 	}
 }
 
@@ -92,14 +90,20 @@ func (player *Player) CreateBullet() *Bullet {
 	return newBullet
 }
 
+func (player *Player) Kill() {
+	player.Mu.Lock()
+	player.DyingStatus.KillNum++
+	player.Mu.Unlock()
+}
+
 func (player *Player) SetLocation(x, y float64) {
-	player.mu.Lock()
+	player.Mu.Lock()
 	player.physicalObject.SetCoord(x, y)
-	player.mu.Unlock()
+	player.Mu.Unlock()
 }
 
 func (player *Player) CalcGameTick() {
-	player.mu.Lock()
+	player.Mu.Lock()
 	if player.isMoveing {
 		player.physicalObject.Move()
 	}
@@ -127,9 +131,10 @@ func (player *Player) CalcGameTick() {
 			player.health -= BULLET_FIRE_SEC_DAMAGE
 			player.FireDamageTickTime = BULLET_FIRE_LAST_TICK
 			player.FireDamageCount--
+			player.DyingStatus.Killer = player.FireDamageOwner
 		}
 	}
-	player.mu.Unlock()
+	player.Mu.Unlock()
 }
 
 func (player *Player) IsValid() bool {
@@ -137,14 +142,14 @@ func (player *Player) IsValid() bool {
 }
 
 func (player *Player) DirChange(angle float64, isMoved bool) {
-	player.mu.Lock()
+	player.Mu.Lock()
 	player.dir = angle
 	player.physicalObject.SetDir(
 		player.speed*math.Sin(angle*(math.Pi/180)),
 		player.speed*math.Cos(angle*(math.Pi/180))*-1,
 	)
 	player.isMoveing = isMoved
-	player.mu.Unlock()
+	player.Mu.Unlock()
 }
 
 func (player *Player) AngleChange(angle float64) {
@@ -176,54 +181,57 @@ func (player *Player) HitedBullet(bullet *Bullet) bool {
 		return false
 	}
 	if bullet.BulletType == BULLET_NONE {
-		player.mu.Lock()
+		player.Mu.Lock()
 		player.health -= BULLET_DAMAGE
 		player.DyingStatus.DyingStatus = DYING_SNOW
 		player.DyingStatus.Killer = bullet.playerId
-		player.mu.Unlock()
+		player.Mu.Unlock()
 	} else if bullet.BulletType == BULLET_STONE {
-		player.mu.Lock()
+		player.Mu.Lock()
 		player.health -= BULLET_STONE_DAMAGE
 		player.DyingStatus.DyingStatus = DYING_STONE
 		player.DyingStatus.Killer = bullet.playerId
-		player.mu.Unlock()
+		player.Mu.Unlock()
 	} else if bullet.BulletType == BULLET_FIRE {
-		player.mu.Lock()
+		player.Mu.Lock()
 		player.health -= BULLET_DAMAGE
 		player.DyingStatus.DyingStatus = DYING_FIRE
 		player.DyingStatus.Killer = bullet.playerId
 		player.FireDamageTickTime = BULLET_FIRE_LAST_TICK
 		player.FireDamageCount = BULLET_FIRE_LAST_COUNT
-		player.mu.Unlock()
+		player.FireDamageOwner = bullet.playerId
+		player.Mu.Unlock()
 	}
 
 	return true
 }
 
 func (player *Player) Dead(killer string, dyingStatus int, placement int) {
+	player.Mu.Lock()
 	player.DyingStatus.Killer = killer
 	player.DyingStatus.DyingStatus = dyingStatus
 	player.DyingStatus.Placement = placement
+	player.Mu.Unlock()
 }
 
 func (player *Player) GetHealPack() {
-	player.mu.Lock()
+	player.Mu.Lock()
 	player.health += HEAL_AMOUNT
 	if player.health >= 100 {
 		player.health = 100
 	}
-	player.mu.Unlock()
+	player.Mu.Unlock()
 }
 
 func (player *Player) GetMagic(magicType int) {
-	player.mu.Lock()
+	player.Mu.Lock()
 	player.MagicType = magicType
-	player.mu.Unlock()
+	player.Mu.Unlock()
 }
 
 func (player *Player) DoDash() bool {
 	if !player.isDashing && player.dashCoolTime == 0 {
-		player.mu.Lock()
+		player.Mu.Lock()
 		player.isDashing = true
 		player.speed = DASH_SPEED
 		player.physicalObject.SetDir(
@@ -231,7 +239,7 @@ func (player *Player) DoDash() bool {
 			player.speed*math.Cos(player.dir*(math.Pi/180))*-1,
 		)
 		player.dashTime = DASH_TICK
-		player.mu.Unlock()
+		player.Mu.Unlock()
 		return true
 	} else {
 		return false

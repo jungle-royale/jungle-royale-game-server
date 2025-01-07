@@ -38,7 +38,7 @@ func main() {
 	// dev 환경 실행
 	if debug {
 		go func() {
-			gameManager.CreateGame("test", player, time)
+			gameManager.SetNewGame("test", player, time)
 		}()
 	}
 

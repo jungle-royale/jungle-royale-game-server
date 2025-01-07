@@ -12,14 +12,19 @@ type Calculator struct {
 	chunk       *Chunk
 	state       *state.State
 	LeafTileSet object.TileHeap
+	loggingFunc func(clientId string, rank, kill int)
 }
 
-func NewCalculator(state *state.State) *Calculator {
+func NewCalculator(
+	state *state.State,
+	loggingFunc func(clientId string, rank, kill int),
+) *Calculator {
 	th := make(object.TileHeap, 0)
 	heap.Init(&th)
 	return &Calculator{
 		state:       state,
 		LeafTileSet: th,
+		loggingFunc: loggingFunc,
 	}
 }
 
@@ -60,15 +65,36 @@ func (calculator *Calculator) IsCollider(colliderA object.Collider, colliderB ob
 
 func (calculator *Calculator) CalcGameTickState() {
 
+	if calculator.state.GameState == state.Playing && calculator.state.Players.Length() == 1 {
+		calculator.state.Players.Range(func(playerId string, player *object.Player) bool {
+			(*player).Dead("", object.DYING_NONE, 1)
+			calculator.state.ChangingState.PlayerDeadStateList.Add(*player.DyingStatus)
+			calculator.loggingFunc(
+				player.DyingStatus.Dead,
+				player.DyingStatus.Placement,
+				player.DyingStatus.KillNum,
+			)
+			return false
+		})
+		calculator.state.GameState = state.End
+		return
+	}
+
 	// player
 	calculator.state.Players.Range(func(playerId string, player *object.Player) bool {
-
 		if !player.IsValid() {
 			player.DyingStatus.Placement = calculator.state.Players.Length()
 			calculator.state.Players.Delete(playerId)
+			(*player).Mu.Lock()
 			calculator.state.ChangingState.PlayerDeadStateList.Add(*player.DyingStatus)
+			(*player).Mu.Unlock()
+			calculator.loggingFunc(
+				player.DyingStatus.Dead,
+				player.DyingStatus.Placement,
+				player.DyingStatus.KillNum,
+			)
 			if killer, ok := calculator.state.Players.Get(player.DyingStatus.Killer); ok {
-				(*killer).DyingStatus.Kill()
+				(*killer).Kill()
 			}
 			calculator.chunk.RemoveKey(
 				player.GetObjectId(),
@@ -176,7 +202,14 @@ func (calculator *Calculator) CalcGameTickState() {
 				calculator.state.Tiles[playerChunkIdx.X][playerChunkIdx.Y].TileState == object.TILE_FALL {
 				player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
 				calculator.state.Players.Delete(playerId)
+				(*player).Mu.Lock()
 				calculator.state.ChangingState.PlayerDeadStateList.Add(*player.DyingStatus)
+				calculator.loggingFunc(
+					player.DyingStatus.Dead,
+					player.DyingStatus.Placement,
+					player.DyingStatus.KillNum,
+				)
+				(*player).Mu.Unlock()
 				calculator.chunk.RemoveKey(
 					player.GetObjectId(),
 					object.OBJECT_PLAYER,

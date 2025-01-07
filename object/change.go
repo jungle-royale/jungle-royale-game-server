@@ -104,7 +104,7 @@ func (gis *GetItemState) MakeSendingData() *message.GetItemState {
 
 type PlayerDeadState struct {
 	Killer      string
-	dead        string
+	Dead        string
 	DyingStatus int
 	KillNum     int
 	Placement   int
@@ -123,7 +123,7 @@ func NewPlayerDeadState(killer string, dead string, ds int) *PlayerDeadState {
 func (pd *PlayerDeadState) MakeSendingData() *message.PlayerDeadState {
 	return &message.PlayerDeadState{
 		KillerId:    pd.Killer,
-		DeadId:      pd.dead,
+		DeadId:      pd.Dead,
 		DyingStatus: int32(pd.DyingStatus),
 	}
 }

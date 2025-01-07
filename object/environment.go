@@ -61,7 +61,7 @@ func (eo *EnvObject) GetPhysical() *physical.Physical {
 	return &eo.physicalObject
 }
 
-const TILE_TYPE_NUM = 3
+const TILE_TYPE_NUM = 4
 
 // [tile type][number of objects]
 var environment = [][]objectData{
@@ -113,8 +113,11 @@ var environment = [][]objectData{
 		objectCircle{3.0, 5.0, 0.8, false},
 		objectCircle{17.0, 4.0, 1.0, false},
 		objectCircle{10.0, 8.0, 0.6, false},
-		objectRectangle{6.5, 7.94, 1.7, 0.8, true},
+		objectRectangle{16.15, 8.6, 1.7, 0.8, true},
 	},
+
+	// tile type 3
+	{},
 }
 
 func (tile *Tile) SetTileEnvironment(tileType int, dx, dy float64) {
