@@ -143,6 +143,7 @@ func (calculator *Calculator) CalcGameTickState() {
 			objectSet[object.OBJECT_MAGICITEM].Range(func(s string) bool {
 				if magicItem, ok := calculator.state.MagicItems.Get(s); ok {
 					if calculator.IsCollider(player, *magicItem) {
+						(*magicItem).DoEffet(player)
 						calculator.state.MagicItems.Delete((*magicItem).ItemId)
 						calculator.chunk.RemoveKey(
 							(*magicItem).GetObjectId(),

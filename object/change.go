@@ -56,18 +56,20 @@ type HitBulletState struct {
 	objectId   string
 	X          float64
 	Y          float64
+	bulletType int
 }
 
-func NewHitBulletState(bulletId, objectId string, objectType int, x, y float64) HitBulletState {
-	return HitBulletState{bulletId, objectType, objectId, x, y}
+func NewHitBulletState(bulletId, objectId string, objectType int, x, y float64, bulletType int) HitBulletState {
+	return HitBulletState{bulletId, objectType, objectId, x, y, bulletType}
 }
 
 func (hbs *HitBulletState) MakeSendingData() *message.HitBulletState {
 	return &message.HitBulletState{
-		BulletId: hbs.bulletId,
-		ObjectId: hbs.objectId,
-		X:        float32(hbs.X),
-		Y:        float32(hbs.Y),
+		BulletId:   hbs.bulletId,
+		ObjectId:   hbs.objectId,
+		X:          float32(hbs.X),
+		Y:          float32(hbs.Y),
+		BulletType: int32(hbs.bulletType),
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"jungle-royale/object/physical"
 	"math"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -34,21 +33,23 @@ func (pd *PlayerDeadState) Kill() {
 }
 
 type Player struct {
-	mu               sync.Mutex
-	id               string
-	dir              float64 // (dx, dy)
-	angle            float64 // degree
-	speed            float64
-	isMoveing        bool
-	isDashing        bool
-	dashTime         int
-	dashCoolTime     int
-	health           int
-	MagicType        int
-	DyingStatus      *PlayerDeadState
-	physicalObject   physical.Physical
-	IsShooting       bool
-	ShootingCoolTime int
+	mu                 sync.Mutex
+	id                 string
+	dir                float64 // (dx, dy)
+	angle              float64 // degree
+	speed              float64
+	isMoveing          bool
+	isDashing          bool
+	dashTime           int
+	dashCoolTime       int
+	health             int
+	MagicType          int
+	DyingStatus        *PlayerDeadState
+	physicalObject     physical.Physical
+	IsShooting         bool
+	ShootingCoolTime   int
+	FireDamageTickTime int
+	FireDamageCount    int
 }
 
 func NewPlayer(id string, x, y float64) *Player {
@@ -68,6 +69,8 @@ func NewPlayer(id string, x, y float64) *Player {
 		NewPlayerDeadState("", id, DYING_NONE),
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
 		false,
+		0,
+		0,
 		0,
 	}
 }
@@ -118,6 +121,14 @@ func (player *Player) CalcGameTick() {
 	if player.ShootingCoolTime > 0 {
 		player.ShootingCoolTime--
 	}
+	if player.FireDamageCount > 0 {
+		player.FireDamageTickTime--
+		if player.FireDamageTickTime == 0 {
+			player.health -= BULLET_FIRE_SEC_DAMAGE
+			player.FireDamageTickTime = BULLET_FIRE_LAST_TICK
+			player.FireDamageCount--
+		}
+	}
 	player.mu.Unlock()
 }
 
@@ -159,7 +170,6 @@ func (player *Player) HitedBullet(bullet *Bullet) bool {
 	if bullet.playerId == player.id {
 		return false
 	}
-
 	if bullet.BulletType == BULLET_NONE {
 		player.mu.Lock()
 		player.health -= BULLET_DAMAGE
@@ -177,21 +187,9 @@ func (player *Player) HitedBullet(bullet *Bullet) bool {
 		player.health -= BULLET_DAMAGE
 		player.DyingStatus.DyingStatus = DYING_FIRE
 		player.DyingStatus.Killer = bullet.playerId
+		player.FireDamageTickTime = BULLET_FIRE_LAST_TICK
+		player.FireDamageCount = BULLET_FIRE_LAST_COUNT
 		player.mu.Unlock()
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-		count := BULLET_FIRE_LAST_SEC
-		for range ticker.C {
-			if count <= 0 {
-				break
-			}
-			player.mu.Lock()
-			player.health -= BULLET_FIRE_SEC_DAMAGE
-			player.DyingStatus.DyingStatus = DYING_FIRE
-			player.DyingStatus.Killer = bullet.playerId
-			player.mu.Unlock()
-			count--
-		}
 	}
 
 	return true

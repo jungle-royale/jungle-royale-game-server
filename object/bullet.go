@@ -7,11 +7,10 @@ import (
 	"sync"
 )
 
-const BULLET_SPEED = 0.5
-const BULLET_RANGE = 20.0
-const BULLET_DAMAGE = 20
+const BULLET_SPEED = 0.25
+const BULLET_DAMAGE = 5
 const BULLET_RADIOUS = 0.2
-const BULLET_MAX_TICK = BULLET_RANGE / BULLET_SPEED
+const BULLET_MAX_TICK = 70
 
 // bullet type (= magic type)
 const (
@@ -20,9 +19,10 @@ const (
 	BULLET_FIRE
 )
 
-const BULLET_STONE_DAMAGE = 30
-const BULLET_FIRE_SEC_DAMAGE = 3
-const BULLET_FIRE_LAST_SEC = 5
+const BULLET_STONE_DAMAGE = BULLET_DAMAGE + 3
+const BULLET_FIRE_SEC_DAMAGE = 1
+const BULLET_FIRE_LAST_TICK = 60
+const BULLET_FIRE_LAST_COUNT = 5
 
 type Bullet struct {
 	mu             sync.Mutex
@@ -98,6 +98,7 @@ func (bullet *Bullet) MakeHitBulletState(objectType int, objectId string) HitBul
 		objectType,
 		bullet.physicalObject.GetX(),
 		bullet.physicalObject.GetY(),
+		bullet.BulletType,
 	)
 }
 
