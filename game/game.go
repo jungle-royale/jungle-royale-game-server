@@ -98,6 +98,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	last_x_idx := rand.Intn(length)
 	last_y_idx := rand.Intn(length)
 	game.state.Tiles[last_x_idx][last_y_idx].ParentTile = game.state.Tiles[last_x_idx][last_y_idx]
+	game.state.Tiles[last_x_idx][last_y_idx].Depth = 0
 	tileTreeSet := util.NewSet[calculator.ChunkIndex]()
 	tileTreeSet.Add(calculator.ChunkIndex{X: last_x_idx, Y: last_y_idx})
 	dir := [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
@@ -119,11 +120,12 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 				})
 				currentTile.ChildTile.Add(childTile)
 				childTile.ParentTile = currentTile
+				childTile.Depth = currentTile.Depth + 1
 				hasChild = true
 			}
 		}
 		if !hasChild {
-			game.calculator.LeafTileSet.Add(currentTile)
+			game.calculator.LeafTileSet.Push(currentTile)
 		}
 	}
 
@@ -157,7 +159,7 @@ func (game *Game) CalcSecLoop() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	gameStartCount := 3
+	gameStartCount := 15
 	for range ticker.C {
 		if game.state.GameState != state.Playing &&
 			game.playerNum >= game.minPlayerNum &&

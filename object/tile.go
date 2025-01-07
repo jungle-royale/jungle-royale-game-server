@@ -5,6 +5,7 @@ import (
 	"jungle-royale/message"
 	"jungle-royale/object/physical"
 	"jungle-royale/util"
+	"sync"
 )
 
 // tile state
@@ -24,6 +25,8 @@ type Tile struct {
 	ParentTile     *Tile
 	tileType       int
 	Environment    *util.Set[*EnvObject]
+	Depth          int
+	Mu             sync.Mutex
 }
 
 func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
@@ -41,6 +44,7 @@ func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
 		ChildTile:   util.NewSyncSet[*Tile](),
 		ParentTile:  nil,
 		Environment: util.NewSyncSet[*EnvObject](),
+		Mu:          sync.Mutex{},
 	}
 }
 
@@ -66,4 +70,30 @@ func (tile *Tile) MakeSendingData() *message.TileState {
 		X:         float32(tile.PhysicalObject.X),
 		Y:         float32(tile.PhysicalObject.Y),
 	}
+}
+
+type TileHeap []*Tile
+
+func (th TileHeap) Len() int {
+	return len(th)
+}
+
+func (th TileHeap) Less(i, j int) bool {
+	return th[i].Depth > th[j].Depth
+}
+
+func (th TileHeap) Swap(i, j int) {
+	th[i], th[j] = th[j], th[i]
+}
+
+func (th *TileHeap) Push(e interface{}) {
+	*th = append(*th, e.(*Tile))
+}
+
+func (th *TileHeap) Pop() interface{} {
+	old := *th
+	n := len(old)
+	e := old[n-1]
+	*th = old[0 : n-1]
+	return e
 }
