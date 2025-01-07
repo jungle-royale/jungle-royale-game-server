@@ -250,7 +250,7 @@ func (game *Game) BroadcastLoop() {
 		}
 
 		gameState := &message.GameState{
-			LastSec:        int32(game.state.LastGameTick / 60),
+			LastSec:        int32((game.state.LastGameTick * 16) / 1000),
 			PlayerState:    playerList,
 			BulletState:    bulletList,
 			HealPackState:  healPackList,
