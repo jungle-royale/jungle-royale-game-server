@@ -40,7 +40,8 @@ message GameState {
     repeated HealPackState healPackState = 3;
     repeated MagicItemState magicItemState = 4;
     repeated TileState tileState = 5;
-    ChangingState changingState = 6;
+    int32 lastSec = 6;
+    ChangingState changingState = 7;
 }
 
 message PlayerState {
@@ -116,6 +117,7 @@ message HitBulletState {
     string objectId = 3;
     float x = 4;
     float y = 5;
+    int32 bulletType = 6;
 }
 
 message GetItemState {
