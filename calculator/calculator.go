@@ -1,23 +1,25 @@
 package calculator
 
 import (
+	"container/heap"
 	"jungle-royale/cons"
 	"jungle-royale/object"
 	"jungle-royale/state"
-	"jungle-royale/util"
 	"time"
 )
 
 type Calculator struct {
 	chunk       *Chunk
 	state       *state.State
-	LeafTileSet *util.Set[*object.Tile]
+	LeafTileSet object.TileHeap
 }
 
 func NewCalculator(state *state.State) *Calculator {
+	th := make(object.TileHeap, 0)
+	heap.Init(&th)
 	return &Calculator{
 		state:       state,
-		LeafTileSet: util.NewSet[*object.Tile](),
+		LeafTileSet: th,
 	}
 }
 
@@ -251,29 +253,36 @@ func (calculator *Calculator) CalcGameTickState() {
 	if calculator.state.GameState == state.Playing {
 		// tile fall
 		if calculator.state.LastGameTick%calculator.state.FallenTime == cons.TILE_FALL_ALERT_TIME%calculator.state.FallenTime {
-			if tile, ok := calculator.LeafTileSet.SelectRandom(func(t *object.Tile) bool { return true }); ok {
-				calculator.LeafTileSet.Remove(tile)
-				tile.SetTileState(object.TILE_DANGEROUS)
-				tile.ParentTile.ChildTile.Remove(tile)
-				if tile.ParentTile.ChildTile.Length() == 0 && tile != tile.ParentTile {
-					calculator.LeafTileSet.Add(tile.ParentTile)
+			if calculator.LeafTileSet.Len() > 0 {
+				t := calculator.LeafTileSet.Pop()
+				if tile, ok := t.(*object.Tile); ok {
+					tile.Mu.Lock()
+					tile.SetTileState(object.TILE_DANGEROUS)
+					tile.ParentTile.ChildTile.Remove(tile)
+					if tile.ParentTile.ChildTile.Length() == 0 && tile != tile.ParentTile {
+						calculator.LeafTileSet.Push(tile.ParentTile)
+					}
+					tile.Mu.Unlock()
+					time.AfterFunc(cons.TILE_FALL_ALERT_TIME*time.Second, func() {
+						tile.Mu.Lock()
+						calculator.state.Tiles[tile.IdxI][tile.IdxJ].SetTileState(object.TILE_FALL)
+						tile.Mu.Unlock()
+						onObjectList := calculator.chunk.GetChunkKeySet(tile.IdxI, tile.IdxJ)
+
+						// healPack
+						onObjectList[object.OBJECT_HEALPACK].Range(func(s string) bool {
+							calculator.state.HealPacks.Delete(s)
+							return true
+						})
+
+						// magicItem
+						onObjectList[object.OBJECT_MAGICITEM].Range(func(s string) bool {
+							calculator.state.MagicItems.Delete(s)
+							return true
+						})
+					})
 				}
-				time.AfterFunc(cons.TILE_FALL_ALERT_TIME*time.Second, func() {
-					calculator.state.Tiles[tile.IdxI][tile.IdxJ].SetTileState(object.TILE_FALL)
-					onObjectList := calculator.chunk.GetChunkKeySet(tile.IdxI, tile.IdxJ)
 
-					// healPack
-					onObjectList[object.OBJECT_HEALPACK].Range(func(s string) bool {
-						calculator.state.HealPacks.Delete(s)
-						return true
-					})
-
-					// magicItem
-					onObjectList[object.OBJECT_MAGICITEM].Range(func(s string) bool {
-						calculator.state.MagicItems.Delete(s)
-						return true
-					})
-				})
 			}
 		}
 		calculator.state.LastGameTick--
