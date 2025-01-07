@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const PLAYER_SPEED = 0.07
+const PLAYER_SPEED = 0.06
 
 // const PLAYER_SPEED = 1
 const DASH_SPEED = 0.2
@@ -17,7 +17,7 @@ const DASH_TICK = 12
 const DASH_COOLTIME = 10 // 0.1 sec
 const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
-const SHOOTING_COOLTIME = 6 // 0.1 sec
+const SHOOTING_COOLTIME = 10 // 0.1 sec
 
 // dying status
 const (
@@ -152,6 +152,10 @@ func (player *Player) AngleChange(angle float64) {
 }
 
 func (player *Player) MakeSendingData() *message.PlayerState {
+	burn := false
+	if player.FireDamageCount > 0 {
+		burn = true
+	}
 	return &message.PlayerState{
 		Id:           player.id,
 		X:            float32(player.physicalObject.GetX()),
@@ -162,6 +166,7 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 		DashCoolTime: int32(player.dashCoolTime),
 		IsMoved:      player.isMoveing,
 		IsDashing:    player.isDashing,
+		IsBurn:       burn,
 	}
 }
 
