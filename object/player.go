@@ -172,6 +172,7 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 		IsMoved:      player.isMoveing,
 		IsDashing:    player.isDashing,
 		IsBurn:       burn,
+		IsShooting:   player.IsShooting,
 	}
 }
 
