@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"jungle-royale/util"
 	"log"
 	"math"
 )
@@ -108,4 +109,13 @@ func (r *Rectangle) SetDir(dx, dy float64) {
 
 func (r *Rectangle) CollideRelocate(obj *Physical) {
 
+}
+
+func (r *Rectangle) GetBoundCoordSet() *util.Set[Coord] {
+	ret := util.NewSet[Coord]()
+	ret.Add(Coord{r.X, r.Y})
+	ret.Add(Coord{r.X + r.Width, r.Y})
+	ret.Add(Coord{r.X, r.Y + r.Length})
+	ret.Add(Coord{r.X + r.Width, r.Y + r.Length})
+	return ret
 }

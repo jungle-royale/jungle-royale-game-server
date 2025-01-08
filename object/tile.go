@@ -3,7 +3,7 @@ package object
 import (
 	"jungle-royale/cons"
 	"jungle-royale/message"
-	"jungle-royale/object/physical"
+	"jungle-royale/physical"
 	"jungle-royale/util"
 	"sync"
 )

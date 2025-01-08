@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"jungle-royale/util"
 	"log"
 	"math"
 )
@@ -149,4 +150,13 @@ func (c *Circle) CollideRelocate(obj *Physical) {
 		log.Printf("err: type is unmatched")
 		return
 	}
+}
+
+func (c *Circle) GetBoundCoordSet() *util.Set[Coord] {
+	ret := util.NewSet[Coord]()
+	ret.Add(Coord{c.X - c.Radius, c.Y})
+	ret.Add(Coord{c.X + c.Radius, c.Y})
+	ret.Add(Coord{c.X, c.Y + c.Radius})
+	ret.Add(Coord{c.X, c.Y - c.Radius})
+	return ret
 }

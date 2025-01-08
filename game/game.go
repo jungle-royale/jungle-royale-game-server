@@ -28,10 +28,11 @@ type Game struct {
 	alertGameEnd      func() // 게임 종료를 알림
 	alertPlayerLeavae func(client *Client)
 	gameLogger        *statistic.Logger
+	debug             bool
 }
 
 // playing time - second
-func NewGame() *Game {
+func NewGame(debug bool) *Game {
 	// playing time - sec
 	gameState := state.NewState()
 	logger := statistic.NewGameLogger()
@@ -42,6 +43,7 @@ func NewGame() *Game {
 		clients:           util.NewSyncMap[ClientId, *Client](),
 		serverClientTable: util.NewSyncMap[string, ClientId](),
 		gameLogger:        logger,
+		debug:             debug,
 	}
 	game.calculator = calculator.NewCalculator(
 		gameState,
@@ -183,6 +185,9 @@ func (game *Game) CalcSecLoop() {
 	defer ticker.Stop()
 
 	gameStartCount := 15
+	if game.debug {
+		gameStartCount = 3
+	}
 	for range ticker.C {
 		if game.state.GameState != state.Playing &&
 			game.playerNum >= game.minPlayerNum &&
