@@ -26,6 +26,7 @@ type Game struct {
 	serverClientTable *util.Map[string, ClientId]
 	alertGameStart    func() // 게임 시작을 알림
 	alertGameEnd      func() // 게임 종료를 알림
+	alertPlayerLeavae func(client *Client)
 	gameLogger        *statistic.Logger
 }
 
@@ -55,11 +56,13 @@ func (game *Game) SetGame(
 	minPlayerNum int,
 	playingTime int,
 	startHandler func(),
+	leaveHandler func(client *Client),
 	endHandler func(),
 ) *Game {
 	game.minPlayerNum = minPlayerNum
 	game.playingTime = playingTime
 	game.alertGameStart = startHandler
+	game.alertPlayerLeavae = leaveHandler
 	game.alertGameEnd = endHandler
 	return game
 }
@@ -238,6 +241,8 @@ func (game *Game) BroadcastLoop() {
 
 	for range ticker.C { // broadcast loop
 
+		game.state.ConfigMu.Lock()
+
 		playerList := make([]*message.PlayerState, 0)
 		game.state.Players.Range(func(key string, player *object.Player) bool {
 			playerList = append(playerList, player.MakeSendingData())
@@ -291,6 +296,8 @@ func (game *Game) BroadcastLoop() {
 			return
 		}
 
+		game.state.ConfigMu.Unlock()
+
 		game.broadcast(data)
 	}
 }
@@ -319,6 +326,9 @@ func (game *Game) OnClient(client *Client) {
 
 func (game *Game) OnClose(client *Client) {
 	game.clients.Delete(client.ID)
+	if game.state.GameState == state.Waiting {
+		game.alertPlayerLeavae(client)
+	}
 	if game.clients.Length() == 0 {
 		log.Println("clinet's count zero")
 		game.alertGameEnd()

@@ -97,8 +97,6 @@ func (gameManager *GameManager) Listen() {
 		}
 
 		gameId := GameId(req.GameID)
-		log.Println(req)
-		log.Printf("게임 생성: %s", gameId)
 
 		_, exists := gameManager.games.Get(gameId)
 		if exists {
@@ -281,6 +279,36 @@ func (gameManager *GameManager) sendEndMessage(gameId GameId) {
 	fmt.Printf("End message response: %s\n", resp.Status)
 }
 
+func (gameManager *GameManager) sendPlayerLeaveMessage(gameId GameId, client *Client) {
+	// url := "http://web-api.eternalsnowman.com:8080"
+	url := "http://172.16.130.80:8080"
+	if gameManager.debug {
+		url = "http://localhost:8080"
+	}
+	url += "/api/game/leave"
+
+	// 요청 데이터 생성
+	msg := network.PlayerLeaveMessageRequest{
+		GameID:   string(gameId),
+		ClientID: client.serverClientId,
+	}
+	jsonData, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Printf("Error encoding JSON: %v\n", err)
+		return
+	}
+
+	// HTTP POST 요청 보내기
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Error sending request: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	fmt.Printf("leave message response: %s\n", resp.Status)
+}
+
 func (gameManager *GameManager) SetNewGame(
 	gameId GameId,
 	minPlayerNum int,
@@ -304,6 +332,9 @@ func (gameManager *GameManager) SetNewGame(
 		func() { // 게임 시작 (대기방에서 시작화면으로)
 			gameManager.handleGameStart(gameId)
 		},
+		func(client *Client) { // 플레이어 대기방 떠남
+			gameManager.handlePlayerLeave(gameId, client)
+		},
 		func() { // 게임 종료
 			gameManager.handleGameEnd(gameId)
 		},
@@ -322,7 +353,6 @@ func (gameManager *GameManager) handleGameStart(gameId GameId) {
 }
 
 func (gameManager *GameManager) handleGameEnd(gameId GameId) {
-	log.Println(gameId)
 	if gameManager.debug {
 		return
 	} else {
@@ -331,6 +361,15 @@ func (gameManager *GameManager) handleGameEnd(gameId GameId) {
 		gameManager.games.Delete(gameId)
 		log.Printf("End Game: %s , (game counts: %d)", gameId, gameManager.games.Length())
 		gameManager.gameRooms[*gameIdx] = NewGame()
+	}
+}
+
+func (gameManager *GameManager) handlePlayerLeave(gameId GameId, client *Client) {
+	if gameManager.debug {
+		return
+	} else {
+		gameManager.sendPlayerLeaveMessage(gameId, client)
+		log.Printf("Player %s leave waiting room", client.ID)
 	}
 }
 
