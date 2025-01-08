@@ -135,8 +135,6 @@ func (gameManager *GameManager) Listen() {
 		if tcpConn != nil {
 			if err := gameManager.setNoDelay(tcpConn); err != nil {
 				log.Println("Failed to disable Nagle:", err)
-			} else {
-				log.Println("Nagle disabled")
 			}
 		}
 

@@ -320,21 +320,25 @@ func (game *Game) OnMessage(data []byte, id string) {
 }
 
 func (game *Game) OnClient(client *Client) {
-	if game.state.GameState == state.Waiting {
-		game.playerNum++
-		game.SetPlayer(client)
+	_, exists := game.serverClientTable.Get(client.serverClientId)
+	if exists {
+		log.Printf("reconnection: %s", client.serverClientId)
 		game.clients.Store(client.ID, client)
-		game.serverClientTable.Store(client.serverClientId, client.ID)
 	} else {
-		_, exists := game.serverClientTable.Get(client.serverClientId)
-		if exists {
-			log.Printf("reconnection: %s", client.serverClientId)
+		// 해당 serverClientId가 존재 하지 않는 경우,
+		// wating 상태면 추가, 아니면 에러
+		if game.state.GameState == state.Waiting {
+			log.Printf("new game client's server client id: %s", client.serverClientId)
+			game.playerNum++
+			game.SetPlayer(client)
 			game.clients.Store(client.ID, client)
+			game.serverClientTable.Store(client.serverClientId, client.ID)
 		} else {
 			log.Printf("fail to reconnect: %s", client.serverClientId)
 			client.close()
 		}
 	}
+
 	if game.clients.Length() > 0 {
 		game.ResetEndCount()
 	}
