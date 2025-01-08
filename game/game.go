@@ -17,6 +17,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const (
+	END_GAME_MAX_TICK_COUNT = 60 * 60 * 3 // 180초(3분)
+)
+
 type Game struct {
 	minPlayerNum      int
 	playingTime       int
@@ -224,7 +228,7 @@ func (game *Game) CalcSecLoop() {
 				}
 				start := &message.GameStart{
 					MapLength:      int32(mapLength * cons.CHUNK_LENGTH),
-					TotalPlayerNum: int32(game.clients.Length()),
+					TotalPlayerNum: int32(game.state.Players.Length()),
 				}
 				gameStart, err := proto.Marshal(&message.Wrapper{
 					MessageType: &message.Wrapper_GameStart{
@@ -320,10 +324,18 @@ func (game *Game) OnMessage(data []byte, id string) {
 }
 
 func (game *Game) OnClient(client *Client) {
-	_, exists := game.serverClientTable.Get(client.serverClientId)
+	if game.NotRunning() {
+		game.alertGameEnd()
+		client.close()
+		return
+	}
+	lastClientId, exists := game.serverClientTable.Get(client.serverClientId)
 	if exists {
 		log.Printf("reconnection: %s", client.serverClientId)
+		game.SetReconnectionPlayer(client, *lastClientId)
 		game.clients.Store(client.ID, client)
+		// MARK: reconnection 처리 후에 store 해야 함!
+		// - broad cast 하기 전에, client한테 reconnection 메시지를 보내야 함
 	} else {
 		// 해당 serverClientId가 존재 하지 않는 경우,
 		// wating 상태면 추가, 아니면 에러
@@ -405,13 +417,32 @@ func (game *Game) SetPlayer(client *Client) {
 		log.Printf("Failed to marshal GameInit: %v", err)
 		return
 	}
-
 	if err := client.write(data); err != nil {
 		log.Printf("Failed to send GameInit message to client %s: %v", clientId, err)
 		return
 	}
+}
 
-	// log.Printf("보낸겨: %s", gameInit.String())
+func (game *Game) SetReconnectionPlayer(client *Client, lastClientId ClientId) {
+	client.ID = lastClientId
+	gameReconnect := &message.GameReconnect{
+		Id:             string(client.ID),
+		MinPlayerNum:   int32(game.minPlayerNum),
+		TotalPlayerNum: int32(game.state.Players.Length()),
+	}
+	data, err := proto.Marshal(&message.Wrapper{
+		MessageType: &message.Wrapper_GameReconnect{
+			GameReconnect: gameReconnect,
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to marshal GameInit: %v", err)
+		return
+	}
+	if err := client.write(data); err != nil {
+		log.Printf("Failed to send GameInit message to client %s: %v", lastClientId, err)
+		return
+	}
 }
 
 func (game *Game) broadcast(data []byte) {
@@ -438,9 +469,12 @@ func (game *Game) CheckEndGame() {
 	game.endTickCountMu.Lock()
 	defer game.endTickCountMu.Unlock()
 
-	var threeMinutesTick = 60 * 60 * 3
-	if game.endTickCount > threeMinutesTick {
+	// 한 번만 end 처리! end 요청이 여러번 가지 않도록!
+	if game.endTickCount == END_GAME_MAX_TICK_COUNT {
+		log.Print("alert game end")
 		game.alertGameEnd()
+	} else {
+		return
 	}
 }
 
@@ -476,4 +510,10 @@ func (game *Game) ResetEndCount() {
 
 func (game *Game) IsEndState() bool {
 	return game.state.GameState == state.End
+}
+
+func (game *Game) NotRunning() bool {
+	game.endTickCountMu.Lock()
+	defer game.endTickCountMu.Unlock()
+	return game.endTickCount >= END_GAME_MAX_TICK_COUNT
 }
