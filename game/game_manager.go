@@ -244,8 +244,8 @@ func (gameManager *GameManager) sendStartMessage(gameId GameId) {
 
 func (gameManager *GameManager) sendEndMessage(gameId GameId) {
 	url := "http://web-api.eternalsnowman.com:8080"
-	// url := "http://172.16.130.80:8080"
 	if gameManager.debug {
+		// url = "http://172.16.130.80:8080"
 		url = "http://localhost:8080"
 	}
 	url += "/api/game/end"
@@ -280,9 +280,9 @@ func (gameManager *GameManager) sendEndMessage(gameId GameId) {
 }
 
 func (gameManager *GameManager) sendPlayerLeaveMessage(gameId GameId, client *Client) {
-	// url := "http://web-api.eternalsnowman.com:8080"
-	url := "http://172.16.130.80:8080"
+	url := "http://web-api.eternalsnowman.com:8080"
 	if gameManager.debug {
+		// url = "http://172.16.130.80:8080"
 		url = "http://localhost:8080"
 	}
 	url += "/api/game/leave"
