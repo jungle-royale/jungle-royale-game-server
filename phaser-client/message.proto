@@ -54,6 +54,8 @@ message PlayerState {
     int32 dashCoolTime = 7;
     bool isMoved = 8;
     bool isDashing = 9;
+    bool isBurn = 10;
+    bool isShooting = 11;
 }
 
 message ChangeBulletState {
@@ -63,6 +65,10 @@ message ChangeBulletState {
 message BulletState {
     string bulletId = 1;
     int32 bulletType = 2;
+    // 0: snow
+    // 1: stone
+    // 2: fire
+
     float x = 3;
     float y = 4;
 }
@@ -118,6 +124,9 @@ message HitBulletState {
     float x = 4;
     float y = 5;
     int32 bulletType = 6;
+    // 0: snow
+    // 1: stone
+    // 2: fire
 }
 
 message GetItemState {

@@ -3,6 +3,7 @@ package object
 import (
 	"jungle-royale/message"
 	"jungle-royale/util"
+	"log"
 )
 
 type ChangingState struct {
@@ -38,6 +39,7 @@ func (cs *ChangingState) MakeSendingData() *message.ChangingState {
 	})
 
 	cs.PlayerDeadStateList.Range(func(pds PlayerDeadState) bool {
+		log.Println(pds)
 		playerDeadStateList = append(playerDeadStateList, pds.MakeSendingData())
 		cs.PlayerDeadStateList.Remove(pds)
 		return true
@@ -126,5 +128,7 @@ func (pd *PlayerDeadState) MakeSendingData() *message.PlayerDeadState {
 		KillerId:    pd.Killer,
 		DeadId:      pd.Dead,
 		DyingStatus: int32(pd.DyingStatus),
+		KillNum:     int32(pd.KillNum),
+		Placement:   int32(pd.Placement),
 	}
 }
