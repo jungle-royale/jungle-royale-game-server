@@ -2,7 +2,7 @@ package object
 
 import (
 	"jungle-royale/message"
-	"jungle-royale/object/physical"
+	"jungle-royale/physical"
 	"math"
 	"sync"
 

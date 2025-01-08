@@ -48,7 +48,7 @@ func NewGameManager(
 		0,
 	}
 	for i := 0; i < MaxGameNum; i++ {
-		socket.gameRooms[i] = NewGame()
+		socket.gameRooms[i] = NewGame(debug)
 	}
 	return &socket
 }
@@ -360,7 +360,7 @@ func (gameManager *GameManager) handleGameEnd(gameId GameId) {
 		gameManager.sendEndMessage(gameId)
 		gameManager.games.Delete(gameId)
 		log.Printf("End Game: %s , (game counts: %d)", gameId, gameManager.games.Length())
-		gameManager.gameRooms[*gameIdx] = NewGame()
+		gameManager.gameRooms[*gameIdx] = NewGame(gameManager.debug)
 	}
 }
 

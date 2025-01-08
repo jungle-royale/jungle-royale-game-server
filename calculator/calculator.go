@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"jungle-royale/cons"
 	"jungle-royale/object"
+	"jungle-royale/physical"
 	"jungle-royale/state"
 	"time"
 )
@@ -195,11 +196,17 @@ func (calculator *Calculator) CalcGameTickState() {
 		// check player is on tile
 		if calculator.state.GameState == state.Playing {
 
-			if playerChunkIdx, valid := calculator.GetChunk().getChunkIndex(
-				(*player.GetPhysical()).GetX(),
-				(*player.GetPhysical()).GetY(),
-			); !valid ||
-				calculator.state.Tiles[playerChunkIdx.X][playerChunkIdx.Y].TileState == object.TILE_FALL {
+			playerCoordSet := (*player.GetPhysical()).GetBoundCoordSet()
+			isOnTile := false
+			playerCoordSet.Range(func(c physical.Coord) bool {
+				if playerChunkIdx, valid := calculator.GetChunk().getChunkIndex(c.X, c.Y); valid &&
+					calculator.state.Tiles[playerChunkIdx.X][playerChunkIdx.Y].TileState != object.TILE_FALL {
+					isOnTile = true
+				}
+				return true
+			})
+
+			if !isOnTile {
 				player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
 				calculator.state.Players.Delete(playerId)
 				(*player).Mu.Lock()

@@ -1,7 +1,7 @@
 package object
 
 import (
-	"jungle-royale/object/physical"
+	"jungle-royale/physical"
 )
 
 // Mover object enum

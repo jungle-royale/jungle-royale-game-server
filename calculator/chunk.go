@@ -3,7 +3,7 @@ package calculator
 import (
 	"jungle-royale/cons"
 	"jungle-royale/object"
-	"jungle-royale/object/physical"
+	"jungle-royale/physical"
 	"jungle-royale/util"
 )
 
