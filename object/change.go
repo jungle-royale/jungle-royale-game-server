@@ -65,6 +65,7 @@ func NewHitBulletState(bulletId, objectId string, objectType int, x, y float64, 
 
 func (hbs *HitBulletState) MakeSendingData() *message.HitBulletState {
 	return &message.HitBulletState{
+		ObjectType: int32(hbs.objectType),
 		BulletId:   hbs.bulletId,
 		ObjectId:   hbs.objectId,
 		X:          float32(hbs.X),

@@ -7,6 +7,7 @@ import (
 	"jungle-royale/util"
 	"math"
 	"math/rand/v2"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -32,7 +33,7 @@ type State struct {
 	MaxCoord      float32
 	LastGameTick  int
 	ChangingState *object.ChangingState
-	saveRankFunc  func(clientId string, rank, kill int)
+	ConfigMu      sync.Mutex
 }
 
 func NewState() *State {
@@ -45,10 +46,13 @@ func NewState() *State {
 		FallenTime:    int(math.MaxInt),
 		LastGameTick:  -1,
 		ChangingState: object.NewChangingState(),
+		ConfigMu:      sync.Mutex{},
 	}
 }
 
 func (state *State) ConfigureState(chunkNum int, playingTime int) {
+
+	state.ConfigMu.Lock()
 
 	state.ChunkNum = chunkNum
 	state.MaxCoord = float32(chunkNum * cons.CHUNK_LENGTH)
@@ -75,6 +79,8 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 
 	// nonfallen tile setting
 	state.FallenTime = (state.LastGameTick - (cons.TILE_FALL_ALERT_TIME)) / (chunkNum * chunkNum)
+
+	state.ConfigMu.Unlock()
 }
 
 func (state *State) AddPlayer(id string, x, y float64) {

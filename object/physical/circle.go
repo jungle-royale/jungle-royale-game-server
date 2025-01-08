@@ -105,14 +105,14 @@ func (c *Circle) CollideRelocate(obj *Physical) {
 
 		dx := opp.X - c.X
 		dy := opp.Y - c.Y
-		dist := math.Hypot(dx, dy)
-		if dist == 0 {
+		d := math.Hypot(dx, dy)
+		if d == 0 {
 			return
 		}
-		nx := dx / dist
-		ny := dy / dist
+		nx := dx / d
+		ny := dy / d
 
-		pen := (c.Radius + opp.Radius) - dist
+		pen := (c.Radius + opp.Radius) - d
 		if pen > 0 {
 			c.X -= nx * pen
 			c.Y -= ny * pen

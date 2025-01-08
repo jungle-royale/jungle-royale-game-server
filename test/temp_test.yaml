@@ -1,5 +1,5 @@
 config:
-  target: "ws://localhost:8000/room?roomId=W7JoU7n2rMjuGkwGO-N-f3m0lNPj5gOCVneyzGfcEPM&clientId=UJyws7TIjpvRqs5d47HocwPyQuRka6y7zuBKzZXM4OY"  # WebSocket 서버 주소
+  target: "ws://localhost:8000/room?roomId=9w3YuhggXt6prxTMrq0BA1jPz_6BQZgdnk7JtOsK3hk&clientId=2BR-lPzcHUun4vUJWhPbgtYZZKPqHQ6sqY_lZKOY6T0"  # WebSocket 서버 주소
   phases:
     - duration: 1
       arrivalRate: 1              # 초당 1명의 사용자 연결
