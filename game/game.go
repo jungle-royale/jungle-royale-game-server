@@ -11,6 +11,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -29,6 +30,8 @@ type Game struct {
 	alertPlayerLeavae func(client *Client)
 	gameLogger        *statistic.Logger
 	debug             bool
+	endTickCountMu    sync.Mutex
+	endTickCount      int
 }
 
 // playing time - second
@@ -44,6 +47,8 @@ func NewGame(debug bool) *Game {
 		serverClientTable: util.NewSyncMap[string, ClientId](),
 		gameLogger:        logger,
 		debug:             debug,
+		endTickCountMu:    sync.Mutex{},
+		endTickCount:      0,
 	}
 	game.calculator = calculator.NewCalculator(
 		gameState,
@@ -176,6 +181,8 @@ func (game *Game) CalcGameTickLoop() {
 		// log.Printf("%d\n", tempTime-currentTime)
 		// currentTime = tempTime
 		game.calculator.CalcGameTickState()
+		game.PlusEndCount()
+		game.CheckEndGame()
 	}
 }
 
@@ -216,7 +223,8 @@ func (game *Game) CalcSecLoop() {
 					mapLength = 2
 				}
 				start := &message.GameStart{
-					MapLength: int32(mapLength * cons.CHUNK_LENGTH),
+					MapLength:      int32(mapLength * cons.CHUNK_LENGTH),
+					TotalPlayerNum: int32(game.clients.Length()),
 				}
 				gameStart, err := proto.Marshal(&message.Wrapper{
 					MessageType: &message.Wrapper_GameStart{
@@ -327,6 +335,9 @@ func (game *Game) OnClient(client *Client) {
 			client.close()
 		}
 	}
+	if game.clients.Length() > 0 {
+		game.ResetEndCount()
+	}
 }
 
 func (game *Game) OnClose(client *Client) {
@@ -334,9 +345,10 @@ func (game *Game) OnClose(client *Client) {
 	if game.state.GameState == state.Waiting {
 		game.alertPlayerLeavae(client)
 	}
+
 	if game.clients.Length() == 0 {
 		log.Println("clinet's count zero")
-		game.alertGameEnd()
+		game.PlusEndCount()
 	}
 }
 
@@ -415,4 +427,49 @@ func (game *Game) IsPlaying() bool {
 	} else {
 		return true
 	}
+}
+
+func (game *Game) CheckEndGame() {
+	// client가 들어올 때, close 될 때, tick 체크할 때 -> 동시 연산
+	game.endTickCountMu.Lock()
+	defer game.endTickCountMu.Unlock()
+
+	var threeMinutesTick = 60 * 60 * 3
+	if game.endTickCount > threeMinutesTick {
+		game.alertGameEnd()
+	}
+}
+
+// client가 zero가 되거나, game이 끝나면 plus 시작
+func (game *Game) PlusEndCount() {
+	game.endTickCountMu.Lock()
+	defer game.endTickCountMu.Unlock()
+
+	// 이미 게임이 끝났다면, 무조건 tick 증가
+	if game.IsEndState() {
+		game.endTickCount += 1
+		return
+	}
+
+	if game.clients.Length() == 0 {
+		game.endTickCount += 1
+		return
+	}
+}
+
+// client가 들어오면 end count ++
+func (game *Game) ResetEndCount() {
+	game.endTickCountMu.Lock()
+	defer game.endTickCountMu.Unlock()
+
+	// 이미 게임이 끝났다면, zero로 초기화 하지 않는다.
+	if game.IsEndState() {
+		return
+	}
+
+	game.endTickCount = 0
+}
+
+func (game *Game) IsEndState() bool {
+	return game.state.GameState == state.End
 }
