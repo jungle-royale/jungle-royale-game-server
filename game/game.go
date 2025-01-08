@@ -324,7 +324,7 @@ func (game *Game) OnMessage(data []byte, id string) {
 }
 
 func (game *Game) OnClient(client *Client) {
-	if game.NotRunning() {
+	if game.IsEndState() {
 		game.alertGameEnd()
 		client.close()
 		return
@@ -510,10 +510,4 @@ func (game *Game) ResetEndCount() {
 
 func (game *Game) IsEndState() bool {
 	return game.state.GameState == state.End
-}
-
-func (game *Game) NotRunning() bool {
-	game.endTickCountMu.Lock()
-	defer game.endTickCountMu.Unlock()
-	return game.endTickCount >= END_GAME_MAX_TICK_COUNT
 }
