@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	END_GAME_MAX_TICK_COUNT = 60 * 60 * 3 // 180초(3분)
+	END_GAME_MAX_TICK_COUNT = 60 * 60 * 1 // 60초(1분)
 )
 
 type Game struct {
@@ -483,9 +483,16 @@ func (game *Game) PlusEndCount() {
 	game.endTickCountMu.Lock()
 	defer game.endTickCountMu.Unlock()
 
-	// 이미 게임이 끝났다면, 무조건 tick 증가
+	IDEL_TICK := 60 * 5
+	endThreashold := END_GAME_MAX_TICK_COUNT - IDEL_TICK
+
+	// 이미 게임이 끝났다면, 5초 정도 여유를 두고 종료 메시지 전송
 	if game.IsEndState() {
-		game.endTickCount += 1
+		if game.endTickCount < endThreashold {
+			game.endTickCount = END_GAME_MAX_TICK_COUNT - IDEL_TICK
+		} else {
+			game.endTickCount += 1
+		}
 		return
 	}
 
