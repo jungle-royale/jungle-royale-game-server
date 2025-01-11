@@ -412,7 +412,7 @@ func (gameManager *GameManager) setClient(client *Client) {
 		}
 	}
 
-	log.Printf("No Room: client is.. %s, %d", client.GameID, gameManager.games.Length())
+	log.Printf("New Client / No Room: client is.. %s, %d", client.GameID, gameManager.games.Length())
 	client.close()
 }
 

@@ -9,16 +9,8 @@ import httpx
 websocket_array = []
 http_url = "http://localhost:8000"
 ws_url = "ws://localhost:8000"
-min_player = 30
-
-async def keep_alive(websocket):
-    try:
-        while True:
-            await websocket.ping()
-            print("Sent Ping to server")
-            await asyncio.sleep(15)  # Ping 주기
-    except Exception as e:
-        print(f"KeepAlive error: {e}")
+min_player = 650
+room_num = 1
 
 async def create_room(room_num):
     create_room_url = http_url + "/api/create-game"
@@ -38,7 +30,6 @@ async def connect_websocket(roomId, clientId):
     # websocket_url = ws_url + f"/room?roomId=test&clientId=r{roomId}c{clientId}"
     websocket = await websockets.connect(websocket_url)
 
-    asyncio.create_task(keep_alive(websocket))
     asyncio.create_task(receive_data(websocket))
 
     websocket_array.append(websocket)
@@ -95,19 +86,19 @@ async def close_websockets():
 # 메인 함수
 async def main():
     try:
-        rn = 1
+        rn = room_num
         create_room_tasks = [create_room(i) for i in range(rn)]
         await asyncio.gather(*create_room_tasks)
         print(f"create {rn} rooms")
         print()
         
         mp = min_player
-        connect_websocket_tasks = [connect_websocket(i, j) for i in range(rn) for j in range(mp - 1)]
+        connect_websocket_tasks = [connect_websocket(i, j) for i in range(rn) for j in range(mp)]
         await asyncio.gather(*connect_websocket_tasks)
         print(f"{rn * mp} users connect")
         print()
         
-        semaphore = asyncio.Semaphore(100)  # 동시에 최대 100개의 작업 실행
+        semaphore = asyncio.Semaphore(1000)  # 동시에 최대 100개의 작업 실행
         
         for i in range(10000):
             

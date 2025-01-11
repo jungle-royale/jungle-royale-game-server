@@ -1,6 +1,7 @@
 package game
 
 import (
+	"log"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -14,7 +15,7 @@ type Client struct {
 	GameID         GameId
 	serverClientId string
 	conn           *websocket.Conn
-	connMu         sync.Mutex
+	sendChan       chan []byte
 }
 
 func NewClient(
@@ -22,28 +23,46 @@ func NewClient(
 	serverClientId string,
 	conn *websocket.Conn,
 ) *Client {
-	return &Client{
+	newClient := &Client{
 		mu:             sync.Mutex{},
 		GameID:         gameId,
 		serverClientId: serverClientId,
 		conn:           conn,
-		connMu:         sync.Mutex{},
+		sendChan:       make(chan []byte, 4),
+	}
+	go newClient.SendData()
+	return newClient
+}
+
+func (client *Client) write(data []byte) {
+	select {
+	case client.sendChan <- data:
+	default:
+		log.Printf("Send channel is full, dropping message for client %s", client.serverClientId)
 	}
 }
 
-func (client *Client) write(data []byte) error {
-	// log.Printf("write start %s", client.serverClientId)
-	client.connMu.Lock()
-	defer client.connMu.Unlock()
-	// log.Println(len(data))
-	err := client.conn.WriteMessage(websocket.BinaryMessage, data)
-	// log.Printf("write end %s", client.serverClientId)
-	return err
+func (client *Client) SendData() {
+	for data := range client.sendChan {
+		// log.Println(len(data))
+		err := client.conn.WriteMessage(websocket.BinaryMessage, data)
+		if err != nil {
+			log.Printf("err while sending data to client %s", client.serverClientId)
+		}
+	}
 }
 
 func (client *Client) close() {
-	client.connMu.Lock()
-	defer client.connMu.Unlock()
-	client.conn.Close()
+
+	if client.conn != nil {
+		client.conn.Close()
+	}
+
+	select {
+	case <-client.sendChan:
+	default:
+		close(client.sendChan)
+	}
+
 	client.conn = nil
 }

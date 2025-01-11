@@ -5,7 +5,7 @@ package cons
 const (
 	MaxClientCount         = 10000
 	CalcLoopInterval       = 16
-	BroadCastLoopInterval  = 16
+	BroadCastLoopInterval  = 50 // 20 FPS
 	MaxGameNum             = 100
 	CheckLoopStateInterval = 1000 // 1 sec
 	InGameMaxPlayer        = 100
