@@ -2,7 +2,7 @@ config:
   target: "http://localhost:3000"
   phases:
     - duration: 1                   # 테스트 실행 시간 (1초)
-      arrivalRate: 1000                # 초당 1명의 사용자
+      arrivalRate: 1                # 초당 1명의 사용자
 scenarios:
   - flow:
       - get: { url: "/room?roomId=test&clientId=test" }  # 메인 페이지 요청

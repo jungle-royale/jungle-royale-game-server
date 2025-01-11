@@ -1,0 +1,31 @@
+# config:
+  # target: "http://localhost:3000"
+  # target: "http://game.eternalsnowman.com"
+  # phases:
+  #   - duration: 1                   # 테스트 실행 시간 (1초)
+  #     arrivalRate: 1                # 초당 1명의 사용자
+
+config:
+  target: "http://game.eternalsnowman.com"
+  phases:
+    - duration: 1                  # 테스트 실행 시간 (10초)
+      arrivalRate: 10                # 초당 1명의 사용자
+  payload:
+    path: "page_test_data.csv"                # CSV 파일 경로
+    fields:
+      - "clientId"
+scenarios:
+  - flow:
+      - get: { url: "/room?roomId=qg1ay8RHzVWFPyQs85_LtwgEqEJ5fsLSvp9xtGbmSr4&clientId={{ clientId }}" }
+
+# scenarios:
+#   - flow:
+#       - get: { url: "/room?roomId=test&clientId=test" }  # 메인 페이지 요청
+      # - get: { url: "/TemplateData/style.css" }         # 스타일 파일 요청
+      # - get: { url: "/Build/Builds.loader.js" }         # JS 파일 요청
+      # - get: { url: "/TemplateData/unity-logo-dark.png" } # 이미지 요청
+      # - get: { url: "/Build/Builds.framework.js.unityweb" } # Unity WebAssembly JS 파일 요청
+      - get: { url: "/Build/Builds.wasm.unityweb" }     # WebAssembly 파일 요청
+      - get: { url: "/Build/Builds.data.unityweb" }     # Unity 데이터 파일 요청
+      # - get: { url: "/manifest.webmanifest" }          # Web manifest 파일 요청
+      # - get: { url: "/ServiceWorker.js" }              # 서비스 워커 파일 요청
