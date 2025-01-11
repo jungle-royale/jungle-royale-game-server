@@ -1,16 +1,19 @@
 package game
 
 import (
+	"fmt"
 	"jungle-royale/calculator"
 	"jungle-royale/cons"
 	"jungle-royale/message"
 	"jungle-royale/object"
+	"jungle-royale/serverlog"
 	"jungle-royale/state"
 	"jungle-royale/statistic"
 	"jungle-royale/util"
 	"log"
 	"math"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,6 +23,33 @@ import (
 const (
 	END_GAME_MAX_TICK_COUNT = 60 * 60 * 1 // 60초(1분)
 )
+
+type LoopState struct {
+	lastCalcLoopCheck      int
+	calcLoopCheck          int
+	lastBroadcastLoopCheck int
+	broadcastLoopCheck     int
+}
+
+type ClientIdAllocator struct {
+	ClientId   int
+	ClientIdMu sync.Mutex
+}
+
+func NewClientIdAllocator() *ClientIdAllocator {
+	return &ClientIdAllocator{
+		0,
+		sync.Mutex{},
+	}
+}
+
+func (cia *ClientIdAllocator) AllocateClientId() int {
+	cia.ClientIdMu.Lock()
+	id := cia.ClientId
+	cia.ClientId++
+	cia.ClientIdMu.Unlock()
+	return id
+}
 
 type Game struct {
 	minPlayerNum      int
@@ -32,32 +62,41 @@ type Game struct {
 	alertGameStart    func() // 게임 시작을 알림
 	alertGameEnd      func() // 게임 종료를 알림
 	alertPlayerLeavae func(client *Client)
-	gameLogger        *statistic.Logger
+	gameRecorder      *statistic.Recorder
 	debug             bool
 	endTickCountMu    sync.Mutex
 	endTickCount      int
+	gameLogger        *serverlog.GameLogger
+	loopState         LoopState
+	loopWaitGroup     sync.WaitGroup
+	ClientIdAllocator *ClientIdAllocator
+	ObjectIdAllocator *object.ObjectIdAllocator
 }
 
 // playing time - second
 func NewGame(debug bool) *Game {
-	// playing time - sec
-	gameState := state.NewState()
-	logger := statistic.NewGameLogger()
+	objectIdAllocator := object.NewObjectIdAllocator()
+	gameState := state.NewState(objectIdAllocator)
+	gameRecorder := statistic.NewGameLogger()
 	game := &Game{
 		playerNum:         0,
 		state:             gameState,
 		calculator:        nil,
 		clients:           util.NewSyncMap[ClientId, *Client](),
 		serverClientTable: util.NewSyncMap[string, ClientId](),
-		gameLogger:        logger,
+		gameRecorder:      gameRecorder,
 		debug:             debug,
 		endTickCountMu:    sync.Mutex{},
 		endTickCount:      0,
+		loopState:         LoopState{0, 0, 0, 0},
+		loopWaitGroup:     sync.WaitGroup{},
+		ClientIdAllocator: NewClientIdAllocator(),
+		ObjectIdAllocator: objectIdAllocator,
 	}
 	game.calculator = calculator.NewCalculator(
 		gameState,
-		func(clientId string, rank, kill int) {
-			game.MakeLog(clientId, rank, kill)
+		func(clientId, rank, kill int) {
+			game.MakeLog(ClientId(clientId), rank, kill)
 		},
 	)
 	return game
@@ -69,18 +108,21 @@ func (game *Game) SetGame(
 	startHandler func(),
 	leaveHandler func(client *Client),
 	endHandler func(),
+	gameLogger *serverlog.GameLogger,
 ) *Game {
 	game.minPlayerNum = minPlayerNum
 	game.playingTime = playingTime
 	game.alertGameStart = startHandler
 	game.alertPlayerLeavae = leaveHandler
 	game.alertGameEnd = endHandler
+	game.gameLogger = gameLogger
+	gameLogger.Log("Set Game")
 	return game
 }
 
-func (game *Game) MakeLog(clientId string, rank, kill int) {
-	if ci, ok := game.clients.Get(ClientId(clientId)); ok {
-		game.gameLogger.AddLog((*ci).serverClientId, rank, kill)
+func (game *Game) MakeLog(clientId ClientId, rank, kill int) {
+	if ci, ok := game.clients.Get(clientId); ok {
+		game.gameRecorder.AddRecord((*ci).serverClientId, rank, kill)
 	}
 }
 
@@ -88,6 +130,7 @@ func (game *Game) SetReadyStatus() *Game {
 	game.state.ConfigureState(cons.WAITING_MAP_CHUNK_NUM, int(math.MaxInt))
 	game.state.GameState = state.Waiting
 	game.calculator.ConfigureCalculator(cons.WAITING_MAP_CHUNK_NUM)
+	game.gameLogger.Log("Set Ready Status")
 	return game
 }
 
@@ -98,7 +141,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	game.calculator.ConfigureCalculator(length)
 
 	// player relocation
-	game.state.Players.Range(func(key string, player *object.Player) bool {
+	game.state.Players.Range(func(key int, player *object.Player) bool {
 		x := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		game.calculator.ReLocation(player, x, y)
@@ -109,7 +152,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	for i := 0; i < length*length; i++ {
 		x := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
-		newHealPack := object.NewHealPack(x, y)
+		newHealPack := object.NewHealPack(x, y, game.ObjectIdAllocator.AllocateHealPackId())
 		game.calculator.SetLocation(newHealPack, x, y)
 		game.state.HealPacks.Store(newHealPack.Id, newHealPack)
 	}
@@ -118,12 +161,12 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	for i := 0; i < length*length; i++ {
 		x := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
-		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y)
+		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y, game.ObjectIdAllocator.AllocateMagicId())
 		game.calculator.SetLocation(newStoneItem, x, y)
 		game.state.MagicItems.Store(newStoneItem.ItemId, newStoneItem)
 		x = float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y = float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
-		newFireItem := object.NewMagicItem(object.FIRE_MAGIC, x, y)
+		newFireItem := object.NewMagicItem(object.FIRE_MAGIC, x, y, game.ObjectIdAllocator.AllocateMagicId())
 		game.calculator.SetLocation(newFireItem, x, y)
 		game.state.MagicItems.Store(newFireItem.ItemId, newFireItem)
 	}
@@ -165,13 +208,29 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 
 	game.state.GameState = state.Playing
 
+	game.gameLogger.Log("Set Playing Status")
+
 	return game
 }
 
 func (game *Game) StartGame() *Game {
+
+	game.gameLogger.Log("init game")
+
+	// game.loopWaitGroup.Add(4)
+
 	go game.CalcGameTickLoop() // start main loop
 	go game.BroadcastLoop()    // broadcast to client
 	go game.CalcSecLoop()
+
+	go game.GameStateCheckLoop()
+
+	// game.loopWaitGroup.Wait()
+
+	// game.gameLogger.Log("Game End")
+
+	// go game.alertGameEnd()
+
 	return game
 }
 
@@ -184,9 +243,21 @@ func (game *Game) CalcGameTickLoop() {
 		// tempTime := time.Now().UnixNano() / int64(time.Millisecond)
 		// log.Printf("%d\n", tempTime-currentTime)
 		// currentTime = tempTime
-		game.calculator.CalcGameTickState()
-		game.PlusEndCount()
-		game.CheckEndGame()
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					game.gameLogger.Log("Recover CalcLoop Panic: " + fmt.Sprintf("%v", r))
+				}
+			}()
+			game.calculator.CalcGameTickState()
+			game.PlusEndCount()
+			game.CheckEndGame()
+		}()
+		game.loopState.calcLoopCheck++
+		if game.state.GameState == state.End {
+			// game.loopWaitGroup.Done()
+			break
+		}
 	}
 }
 
@@ -200,39 +271,21 @@ func (game *Game) CalcSecLoop() {
 		gameStartCount = 3
 	}
 	for range ticker.C {
-		if game.state.GameState != state.Playing &&
-			game.playerNum >= game.minPlayerNum &&
-			gameStartCount >= 0 {
-			Count := &message.GameCount{
-				Count: int32(gameStartCount),
-			}
-			data, err := proto.Marshal(&message.Wrapper{
-				MessageType: &message.Wrapper_GameCount{
-					GameCount: Count,
-				},
-			})
-			if err != nil {
-				log.Printf("Failed to marshal GameState: %v", err)
-				return
-			}
-
-			log.Printf("game play in %d", gameStartCount)
-
-			game.broadcast(data)
-
-			gameStartCount--
-			if gameStartCount == 0 {
-				mapLength := int(math.Sqrt(float64(game.playerNum)))
-				if mapLength < 2 {
-					mapLength = 2
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					game.gameLogger.Log("Recover SecLoop Panic: " + fmt.Sprintf("%v", r))
 				}
-				start := &message.GameStart{
-					MapLength:      int32(mapLength * cons.CHUNK_LENGTH),
-					TotalPlayerNum: int32(game.state.Players.Length()),
+			}()
+			if game.state.GameState == state.Waiting &&
+				game.playerNum >= game.minPlayerNum &&
+				gameStartCount >= 0 {
+				Count := &message.GameCount{
+					Count: int32(gameStartCount),
 				}
-				gameStart, err := proto.Marshal(&message.Wrapper{
-					MessageType: &message.Wrapper_GameStart{
-						GameStart: start,
+				data, err := proto.Marshal(&message.Wrapper{
+					MessageType: &message.Wrapper_GameCount{
+						GameCount: Count,
 					},
 				})
 				if err != nil {
@@ -240,92 +293,139 @@ func (game *Game) CalcSecLoop() {
 					return
 				}
 
-				game.alertGameStart()
+				log.Printf("game play in %d", gameStartCount)
 
-				game.broadcast(gameStart)
+				game.broadcast(data)
 
-				game.SetPlayingStatus(mapLength)
-				log.Println("game start")
+				gameStartCount--
+				if gameStartCount == 0 {
+					mapLength := int(math.Sqrt(float64(game.playerNum)))
+					if mapLength < 2 {
+						mapLength = 2
+					}
+					start := &message.GameStart{
+						MapLength:      int32(mapLength * cons.CHUNK_LENGTH),
+						TotalPlayerNum: int32(game.state.Players.Length()),
+					}
+					gameStart, err := proto.Marshal(&message.Wrapper{
+						MessageType: &message.Wrapper_GameStart{
+							GameStart: start,
+						},
+					})
+					if err != nil {
+						log.Printf("Failed to marshal GameState: %v", err)
+						return
+					}
+					go game.alertGameStart()
+					game.broadcast(gameStart)
+					game.SetPlayingStatus(mapLength)
+					game.gameLogger.Log("game start")
+				}
 			}
+			game.calculator.SecLoop()
+		}()
+		if game.state.GameState == state.End {
+			// game.loopWaitGroup.Done()
+			break
 		}
-		game.calculator.SecLoop()
 	}
 }
 
 func (game *Game) BroadcastLoop() {
 	ticker := time.NewTicker(cons.BroadCastLoopInterval * time.Millisecond)
+	// ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C { // broadcast loop
 
-		game.state.ConfigMu.Lock()
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					game.gameLogger.Log("Recover BroadcastLoop Panic: " + fmt.Sprintf("%v", r))
+				}
+			}()
 
-		playerList := make([]*message.PlayerState, 0)
-		game.state.Players.Range(func(key string, player *object.Player) bool {
-			playerList = append(playerList, player.MakeSendingData())
-			return true
-		})
+			game.state.ConfigMu.Lock()
 
-		bulletList := make([]*message.BulletState, 0)
-		game.state.Bullets.Range(func(key string, bullet *object.Bullet) bool {
-			bulletList = append(bulletList, bullet.MakeSendingData())
-			return true
-		})
+			playerList := make([]*message.PlayerState, 0)
+			game.state.Players.Range(func(key int, player *object.Player) bool {
+				playerList = append(playerList, player.MakeSendingData())
+				return true
+			})
 
-		healPackList := make([]*message.HealPackState, 0)
-		game.state.HealPacks.Range(func(key string, healPack *object.HealPack) bool {
-			healPackList = append(healPackList, healPack.MakeSendingData())
-			return true
-		})
+			bulletList := make([]*message.BulletState, 0)
+			game.state.Bullets.Range(func(key int, bullet *object.Bullet) bool {
+				bulletList = append(bulletList, bullet.MakeSendingData())
+				return true
+			})
 
-		magicItemList := make([]*message.MagicItemState, 0)
-		game.state.MagicItems.Range(func(key string, magicItem *object.Magic) bool {
-			magicItemList = append(magicItemList, magicItem.MakeSendingData())
-			return true
-		})
+			healPackList := make([]*message.HealPackState, 0)
+			game.state.HealPacks.Range(func(key int, healPack *object.HealPack) bool {
+				healPackList = append(healPackList, healPack.MakeSendingData())
+				return true
+			})
 
-		tileStateList := make([]*message.TileState, 0)
-		for i := 0; i < game.state.ChunkNum; i++ {
-			for j := 0; j < game.state.ChunkNum; j++ {
-				if game.state.Tiles[i][j].TileState != object.TILE_FALL {
-					tileStateList = append(tileStateList, game.state.Tiles[i][j].MakeSendingData())
+			magicItemList := make([]*message.MagicItemState, 0)
+			game.state.MagicItems.Range(func(key int, magicItem *object.Magic) bool {
+				magicItemList = append(magicItemList, magicItem.MakeSendingData())
+				return true
+			})
+
+			tileStateList := make([]*message.TileState, 0)
+			for i := 0; i < game.state.ChunkNum; i++ {
+				for j := 0; j < game.state.ChunkNum; j++ {
+					if game.state.Tiles[i][j].TileState != object.TILE_FALL {
+						tileStateList = append(tileStateList, game.state.Tiles[i][j].MakeSendingData())
+					}
 				}
 			}
+
+			gameState := &message.GameState{
+				LastSec:        int32((game.state.LastGameTick * 16) / 1000),
+				PlayerState:    playerList,
+				BulletState:    bulletList,
+				HealPackState:  healPackList,
+				MagicItemState: magicItemList,
+				TileState:      tileStateList,
+				ChangingState:  game.state.ChangingState.MakeSendingData(),
+			}
+
+			// log.Println(gameState)
+			// log.Printf("\n\n")
+
+			data, err := proto.Marshal(&message.Wrapper{
+				MessageType: &message.Wrapper_GameState{
+					GameState: gameState,
+				},
+			})
+
+			if err != nil {
+				log.Printf("Failed to marshal GameState: %v", err)
+				return
+			}
+
+			game.state.ConfigMu.Unlock()
+
+			game.broadcast(data)
+
+		}()
+		game.loopState.broadcastLoopCheck++
+		if game.state.GameState == state.End {
+			// game.loopWaitGroup.Done()
+			break
 		}
-
-		gameState := &message.GameState{
-			LastSec:        int32((game.state.LastGameTick * 16) / 1000),
-			PlayerState:    playerList,
-			BulletState:    bulletList,
-			HealPackState:  healPackList,
-			MagicItemState: magicItemList,
-			TileState:      tileStateList,
-			ChangingState:  game.state.ChangingState.MakeSendingData(),
-		}
-
-		data, err := proto.Marshal(&message.Wrapper{
-			MessageType: &message.Wrapper_GameState{
-				GameState: gameState,
-			},
-		})
-		if err != nil {
-			log.Printf("Failed to marshal GameState: %v", err)
-			return
-		}
-
-		game.state.ConfigMu.Unlock()
-
-		game.broadcast(data)
 	}
 }
 
-func (game *Game) OnMessage(data []byte, id string) {
+func (game *Game) OnMessage(data []byte, id int) {
 	game.handleMessage(id, data)
 }
 
 func (game *Game) OnClient(client *Client) {
+
 	if game.IsEndState() {
-		game.alertGameEnd()
+		// game.alertGameEnd()
+		game.state.GameState = state.End
 		client.close()
 		return
 	}
@@ -333,6 +433,7 @@ func (game *Game) OnClient(client *Client) {
 	if exists {
 		log.Printf("reconnection: %s", client.serverClientId)
 		game.SetReconnectionPlayer(client, *lastClientId)
+		client.ID = ClientId(game.ClientIdAllocator.AllocateClientId())
 		game.clients.Store(client.ID, client)
 		// MARK: reconnection 처리 후에 store 해야 함!
 		// - broad cast 하기 전에, client한테 reconnection 메시지를 보내야 함
@@ -342,9 +443,11 @@ func (game *Game) OnClient(client *Client) {
 		if game.state.GameState == state.Waiting {
 			log.Printf("new game client's server client id: %s", client.serverClientId)
 			game.playerNum++
+			client.ID = ClientId(game.ClientIdAllocator.AllocateClientId())
 			game.SetPlayer(client)
+			log.Print(client.ID)
 			game.clients.Store(client.ID, client)
-			game.serverClientTable.Store(client.serverClientId, client.ID)
+			game.serverClientTable.Store(client.serverClientId, ClientId(client.ID))
 		} else {
 			log.Printf("fail to reconnect: %s", client.serverClientId)
 			client.close()
@@ -354,24 +457,28 @@ func (game *Game) OnClient(client *Client) {
 	if game.clients.Length() > 0 {
 		game.ResetEndCount()
 	}
+
+	game.gameLogger.Log("On Client " + client.serverClientId)
 }
 
 func (game *Game) OnClose(client *Client) {
-	game.clients.Delete(client.ID)
+	game.clients.Delete(ClientId(client.ID))
 	if game.state.GameState == state.Waiting {
-		game.alertPlayerLeavae(client)
+		go game.alertPlayerLeavae(client)
 	}
 
 	if game.clients.Length() == 0 {
 		log.Println("clinet's count zero")
 		game.PlusEndCount()
 	}
+
+	game.gameLogger.Log("On Close " + client.serverClientId)
 }
 
-func (game *Game) handleMessage(clientId string, data []byte) {
+func (game *Game) handleMessage(clientId int, data []byte) {
 	var wrapper message.Wrapper
 	if err := proto.Unmarshal(data, &wrapper); err != nil {
-		log.Printf("Failed to unmarshal message from client %s: %v", clientId, err)
+		log.Printf("Failed to unmarshal message from client %d: %v", clientId, err)
 		return
 	}
 
@@ -396,16 +503,16 @@ func (game *Game) handleMessage(clientId string, data []byte) {
 
 func (game *Game) SetPlayer(client *Client) {
 
-	clientId := string(client.ID)
+	clientId := client.ID
 
 	x := rand.Intn(int(game.state.MaxCoord))
 	y := rand.Intn(int(game.state.MaxCoord))
 
-	game.state.AddPlayer(clientId, float64(x), float64(y))
+	game.state.AddPlayer(int(clientId), float64(x), float64(y))
 
 	// send GameInit message
 	gameInit := &message.GameInit{
-		Id:           clientId,
+		Id:           int32(clientId),
 		MinPlayerNum: int32(game.minPlayerNum),
 	}
 	data, err := proto.Marshal(&message.Wrapper{
@@ -418,7 +525,7 @@ func (game *Game) SetPlayer(client *Client) {
 		return
 	}
 	if err := client.write(data); err != nil {
-		log.Printf("Failed to send GameInit message to client %s: %v", clientId, err)
+		log.Printf("Failed to send GameInit message to client %d: %v", clientId, err)
 		return
 	}
 }
@@ -426,7 +533,7 @@ func (game *Game) SetPlayer(client *Client) {
 func (game *Game) SetReconnectionPlayer(client *Client, lastClientId ClientId) {
 	client.ID = lastClientId
 	gameReconnect := &message.GameReconnect{
-		Id:             string(client.ID),
+		Id:             int32(client.ID),
 		MinPlayerNum:   int32(game.minPlayerNum),
 		TotalPlayerNum: int32(game.state.Players.Length()),
 	}
@@ -436,24 +543,29 @@ func (game *Game) SetReconnectionPlayer(client *Client, lastClientId ClientId) {
 		},
 	})
 	if err != nil {
-		log.Printf("Failed to marshal GameInit: %v", err)
+		// log.Printf("Failed to marshal GameInit: %v", err)
+		game.gameLogger.Log("Failed to marshal GameInit: " + err.Error())
 		return
 	}
 	if err := client.write(data); err != nil {
-		log.Printf("Failed to send GameInit message to client %s: %v", lastClientId, err)
+		// log.Printf("Failed to send GameInit message to client %s: %v", lastClientId, err)
+		game.gameLogger.Log("Failed to send GameInit message to client " + strconv.Itoa(int(lastClientId)))
 		return
 	}
 }
 
 func (game *Game) broadcast(data []byte) {
+	// log.Printf("\n\nnew broadcast")
 	game.clients.Range(func(id ClientId, client *Client) bool {
+		// log.Println(client)
 		if err := client.write(data); err != nil {
-			log.Printf("Failed to send message to client %s: %v", id, err)
+			log.Printf("Failed to send message to client %d: %v", id, err)
 			client.close()
 			game.clients.Delete(id)
 		}
 		return true
 	})
+	// log.Printf("end broadcast")
 }
 
 func (game *Game) IsPlaying() bool {
@@ -471,8 +583,10 @@ func (game *Game) CheckEndGame() {
 
 	// 한 번만 end 처리! end 요청이 여러번 가지 않도록!
 	if game.endTickCount == END_GAME_MAX_TICK_COUNT {
-		log.Print("alert game end")
-		game.alertGameEnd()
+		// log.Print("alert game end")
+		game.gameLogger.Log("alert game end")
+		// game.alertGameEnd()
+		game.state.GameState = state.End
 	} else {
 		return
 	}
@@ -517,4 +631,38 @@ func (game *Game) ResetEndCount() {
 
 func (game *Game) IsEndState() bool {
 	return game.state.GameState == state.End
+}
+
+func (game *Game) GameStateCheckLoop() {
+
+	time.Sleep(5 * time.Second)
+
+	ticker := time.NewTicker(cons.CheckLoopStateInterval * time.Millisecond)
+	defer ticker.Stop()
+
+	for range ticker.C {
+
+		// if game.loopState.calcLoopCheck == game.loopState.lastCalcLoopCheck {
+		// 	game.gameLogger.Log("Calc loop restart")
+		// 	go game.CalcGameTickLoop()
+		// }
+		// game.loopState.lastCalcLoopCheck = game.loopState.calcLoopCheck
+
+		// if game.loopState.broadcastLoopCheck == game.loopState.lastBroadcastLoopCheck {
+		// 	game.gameLogger.Log("Broadcast loop restart")
+		// 	go game.BroadcastLoop()
+		// }
+		// game.loopState.lastBroadcastLoopCheck = game.loopState.broadcastLoopCheck
+
+		if game.state.GameState == state.End {
+			// game.loopWaitGroup.Done()
+			break
+		}
+
+		calcLoopInSec := game.loopState.calcLoopCheck - game.loopState.lastCalcLoopCheck
+		game.loopState.lastCalcLoopCheck = game.loopState.calcLoopCheck
+		broadCastLoopInSec := game.loopState.broadcastLoopCheck - game.loopState.lastBroadcastLoopCheck
+		game.loopState.lastBroadcastLoopCheck = game.loopState.broadcastLoopCheck
+		game.gameLogger.Log("calc, broadcast, lastplayer, lasttick: " + fmt.Sprint(calcLoopInSec) + " " + fmt.Sprint(broadCastLoopInSec) + " " + fmt.Sprint(game.state.Players.Length()) + " " + fmt.Sprint(game.state.LastGameTick))
+	}
 }

@@ -20,7 +20,7 @@ const (
 
 type Object interface {
 	GetObjectType() int
-	GetObjectId() string
+	GetObjectId() int
 	Collider
 }
 

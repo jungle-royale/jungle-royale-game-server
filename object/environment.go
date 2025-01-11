@@ -2,12 +2,10 @@ package object
 
 import (
 	"jungle-royale/physical"
-
-	"github.com/google/uuid"
 )
 
 type objectData interface {
-	createEnvObject(dx, dy float64) *EnvObject
+	createEnvObject(dx, dy float64, id int) *EnvObject
 }
 
 type objectCircle struct {
@@ -17,10 +15,10 @@ type objectCircle struct {
 	isShort bool
 }
 
-func (c objectCircle) createEnvObject(dx, dy float64) *EnvObject {
+func (c objectCircle) createEnvObject(dx, dy float64, id int) *EnvObject {
 	var p physical.Physical = physical.NewCircle(c.x+dx, c.y+dy, c.radious)
 	return &EnvObject{
-		objId:          uuid.New().String(),
+		objId:          id,
 		physicalObject: p,
 		IsShort:        c.isShort,
 	}
@@ -34,17 +32,17 @@ type objectRectangle struct {
 	isShort bool
 }
 
-func (r objectRectangle) createEnvObject(dx, dy float64) *EnvObject {
+func (r objectRectangle) createEnvObject(dx, dy float64, id int) *EnvObject {
 	var p physical.Physical = physical.NewRectangle(r.x+dx, r.y+dy, r.width, r.length)
 	return &EnvObject{
-		objId:          uuid.New().String(),
+		objId:          id,
 		physicalObject: p,
 		IsShort:        r.isShort,
 	}
 }
 
 type EnvObject struct {
-	objId          string
+	objId          int
 	IsShort        bool // false → collision with bullet
 	physicalObject physical.Physical
 }
@@ -53,7 +51,7 @@ func (eo *EnvObject) GetObjectType() int {
 	return OBJECT_ENVIRONMENT
 }
 
-func (eo *EnvObject) GetObjectId() string {
+func (eo *EnvObject) GetObjectId() int {
 	return eo.objId
 }
 
@@ -120,9 +118,9 @@ var environment = [][]objectData{
 	{},
 }
 
-func (tile *Tile) SetTileEnvironment(tileType int, dx, dy float64) {
+func (tile *Tile) SetTileEnvironment(tileType, objectId int, dx, dy float64) {
 	tile.tileType = tileType
 	for _, p := range environment[tileType] {
-		tile.Environment.Add(p.createEnvObject(dx, dy))
+		tile.Environment.Add(p.createEnvObject(dx, dy, objectId))
 	}
 }

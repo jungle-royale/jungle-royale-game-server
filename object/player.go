@@ -5,8 +5,6 @@ import (
 	"jungle-royale/physical"
 	"math"
 	"sync"
-
-	"github.com/google/uuid"
 )
 
 const PLAYER_SPEED = 0.06
@@ -30,7 +28,7 @@ const (
 
 type Player struct {
 	Mu                 sync.Mutex
-	id                 string
+	id                 int
 	dir                float64 // (dx, dy)
 	angle              float64 // degree
 	speed              float64
@@ -46,10 +44,10 @@ type Player struct {
 	ShootingCoolTime   int
 	FireDamageTickTime int
 	FireDamageCount    int
-	FireDamageOwner    string // 불 틱데미지 입힌사람
+	FireDamageOwner    int // 불 틱데미지 입힌사람
 }
 
-func NewPlayer(id string, x, y float64) *Player {
+func NewPlayer(id int, x, y float64) *Player {
 
 	return &Player{
 		sync.Mutex{},
@@ -63,24 +61,24 @@ func NewPlayer(id string, x, y float64) *Player {
 		0,
 		100,
 		BULLET_NONE,
-		NewPlayerDeadState("", id, DYING_NONE),
+		NewPlayerDeadState(-1, id, DYING_NONE),
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
 		false,
 		0,
 		0,
 		0,
-		"",
+		-1,
 	}
 }
 
-func (player *Player) CreateBullet() *Bullet {
+func (player *Player) CreateBullet(id int) *Bullet {
 	if player.ShootingCoolTime > 0 || player.isDashing {
 		return nil
 	} else {
 		player.ShootingCoolTime = SHOOTING_COOLTIME
 	}
 	newBullet := NewBullet(
-		uuid.New().String(),
+		id,
 		player.id,
 		player.MagicType,
 		player.physicalObject.GetX(),
@@ -162,7 +160,7 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 		burn = true
 	}
 	return &message.PlayerState{
-		Id:           player.id,
+		Id:           int32(player.id),
 		X:            float32(player.physicalObject.GetX()),
 		Y:            float32(player.physicalObject.GetY()),
 		Health:       int32(player.health),
@@ -207,7 +205,7 @@ func (player *Player) HitedBullet(bullet *Bullet) bool {
 	return true
 }
 
-func (player *Player) Dead(killer string, dyingStatus int, placement int) {
+func (player *Player) Dead(killer, dyingStatus, placement int) {
 	player.Mu.Lock()
 	player.DyingStatus.Killer = killer
 	player.DyingStatus.DyingStatus = dyingStatus
@@ -255,6 +253,6 @@ func (player *Player) GetObjectType() int {
 	return OBJECT_PLAYER
 }
 
-func (player *Player) GetObjectId() string {
+func (player *Player) GetObjectId() int {
 	return player.id
 }

@@ -13,12 +13,12 @@ type Calculator struct {
 	chunk       *Chunk
 	state       *state.State
 	LeafTileSet object.TileHeap
-	loggingFunc func(clientId string, rank, kill int)
+	loggingFunc func(clientId, rank, kill int)
 }
 
 func NewCalculator(
 	state *state.State,
-	loggingFunc func(clientId string, rank, kill int),
+	loggingFunc func(clientId, rank, kill int),
 ) *Calculator {
 	th := make(object.TileHeap, 0)
 	heap.Init(&th)
@@ -66,9 +66,9 @@ func (calculator *Calculator) IsCollider(colliderA object.Collider, colliderB ob
 
 func (calculator *Calculator) CalcGameTickState() {
 
-	if calculator.state.GameState == state.Playing && calculator.state.Players.Length() == 1 {
-		calculator.state.Players.Range(func(playerId string, player *object.Player) bool {
-			(*player).Dead("", object.DYING_NONE, 1)
+	if calculator.state.GameState == state.Playing && calculator.state.Players.Length() <= 1 {
+		calculator.state.Players.Range(func(playerId int, player *object.Player) bool {
+			(*player).Dead(-1, object.DYING_NONE, 1)
 			calculator.state.ChangingState.PlayerDeadStateList.Add(*player.DyingStatus)
 			calculator.loggingFunc(
 				player.DyingStatus.Dead,
@@ -82,7 +82,7 @@ func (calculator *Calculator) CalcGameTickState() {
 	}
 
 	// player
-	calculator.state.Players.Range(func(playerId string, player *object.Player) bool {
+	calculator.state.Players.Range(func(playerId int, player *object.Player) bool {
 		if !player.IsValid() {
 			player.DyingStatus.Placement = calculator.state.Players.Length()
 			calculator.state.Players.Delete(playerId)
@@ -108,7 +108,7 @@ func (calculator *Calculator) CalcGameTickState() {
 
 		// create bullet
 		if player.IsShooting && player.ShootingCoolTime <= 0 {
-			newBullet := player.CreateBullet()
+			newBullet := player.CreateBullet(calculator.state.ObjectIdAllocator.AllocateBulletId())
 			if newBullet != nil {
 				calculator.state.Bullets.Store(newBullet.GetObjectId(), newBullet)
 			}
@@ -119,7 +119,7 @@ func (calculator *Calculator) CalcGameTickState() {
 			objectSet := calculator.chunk.chunkTable[ci.X][ci.Y]
 
 			// player - player
-			objectSet[object.OBJECT_PLAYER].Range(func(s string) bool {
+			objectSet[object.OBJECT_PLAYER].Range(func(s int) bool {
 				if playerId == s {
 					return true
 				}
@@ -143,7 +143,7 @@ func (calculator *Calculator) CalcGameTickState() {
 			})
 
 			// player - healPack
-			objectSet[object.OBJECT_HEALPACK].Range(func(s string) bool {
+			objectSet[object.OBJECT_HEALPACK].Range(func(s int) bool {
 				if healPack, ok := calculator.state.HealPacks.Get(s); ok {
 					if calculator.IsCollider(player, *healPack) {
 						calculator.state.HealPacks.Delete((*healPack).Id)
@@ -169,7 +169,7 @@ func (calculator *Calculator) CalcGameTickState() {
 			})
 
 			// player - magicItem
-			objectSet[object.OBJECT_MAGICITEM].Range(func(s string) bool {
+			objectSet[object.OBJECT_MAGICITEM].Range(func(s int) bool {
 				if magicItem, ok := calculator.state.MagicItems.Get(s); ok {
 					if calculator.IsCollider(player, *magicItem) {
 						(*magicItem).DoEffet(player)
@@ -207,7 +207,7 @@ func (calculator *Calculator) CalcGameTickState() {
 			})
 
 			if !isOnTile {
-				player.Dead("", object.DYING_FALL, calculator.state.Players.Length())
+				player.Dead(-1, object.DYING_FALL, calculator.state.Players.Length())
 				calculator.state.Players.Delete(playerId)
 				(*player).Mu.Lock()
 				calculator.state.ChangingState.PlayerDeadStateList.Add(*player.DyingStatus)
@@ -229,7 +229,7 @@ func (calculator *Calculator) CalcGameTickState() {
 	})
 
 	// bullet
-	calculator.state.Bullets.Range(func(bulletId string, bullet *object.Bullet) bool {
+	calculator.state.Bullets.Range(func(bulletId int, bullet *object.Bullet) bool {
 
 		calculator.CalcMover(bullet)
 
@@ -238,7 +238,7 @@ func (calculator *Calculator) CalcGameTickState() {
 			objectSet := calculator.chunk.chunkTable[ci.X][ci.Y]
 
 			// bullet - player
-			objectSet[object.OBJECT_PLAYER].Range(func(s string) bool {
+			objectSet[object.OBJECT_PLAYER].Range(func(s int) bool {
 				if player, ok := calculator.state.Players.Get(s); ok {
 					if calculator.IsCollider(bullet, *player) && bullet.IsValidHit((*player).GetObjectId()) {
 						calculator.state.Bullets.Delete(bulletId)
@@ -310,13 +310,13 @@ func (calculator *Calculator) CalcGameTickState() {
 						onObjectList := calculator.chunk.GetChunkKeySet(tile.IdxI, tile.IdxJ)
 
 						// healPack
-						onObjectList[object.OBJECT_HEALPACK].Range(func(s string) bool {
+						onObjectList[object.OBJECT_HEALPACK].Range(func(s int) bool {
 							calculator.state.HealPacks.Delete(s)
 							return true
 						})
 
 						// magicItem
-						onObjectList[object.OBJECT_MAGICITEM].Range(func(s string) bool {
+						onObjectList[object.OBJECT_MAGICITEM].Range(func(s int) bool {
 							calculator.state.MagicItems.Delete(s)
 							return true
 						})

@@ -26,8 +26,8 @@ const BULLET_FIRE_LAST_COUNT = 5
 
 type Bullet struct {
 	mu             sync.Mutex
-	bulletId       string
-	playerId       string
+	bulletId       int
+	playerId       int
 	lastTick       int
 	BulletType     int
 	isValid        bool
@@ -35,8 +35,8 @@ type Bullet struct {
 }
 
 func NewBullet(
-	bulletId string,
-	playerId string,
+	bulletId int,
+	playerId int,
 	magicType int,
 	startX float64,
 	startY float64,
@@ -73,7 +73,7 @@ func (bullet *Bullet) IsValid() bool {
 
 func (bullet *Bullet) MakeSendingData() *message.BulletState {
 	return &message.BulletState{
-		BulletId: bullet.bulletId,
+		BulletId: int32(bullet.bulletId),
 		X:        float32(bullet.physicalObject.GetX()),
 		Y:        float32(bullet.physicalObject.GetY()),
 	}
@@ -87,11 +87,11 @@ func (bullet *Bullet) GetObjectType() int {
 	return OBJECT_BULLET
 }
 
-func (bullet *Bullet) GetObjectId() string {
+func (bullet *Bullet) GetObjectId() int {
 	return bullet.bulletId
 }
 
-func (bullet *Bullet) MakeHitBulletState(objectType int, objectId string) HitBulletState {
+func (bullet *Bullet) MakeHitBulletState(objectType int, objectId int) HitBulletState {
 	return NewHitBulletState(
 		bullet.bulletId,
 		objectId,
@@ -102,7 +102,7 @@ func (bullet *Bullet) MakeHitBulletState(objectType int, objectId string) HitBul
 	)
 }
 
-func (bullet *Bullet) IsValidHit(playerId string) bool {
+func (bullet *Bullet) IsValidHit(playerId int) bool {
 	if bullet.playerId != playerId {
 		return true
 	} else {

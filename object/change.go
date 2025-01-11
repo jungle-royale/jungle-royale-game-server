@@ -3,7 +3,6 @@ package object
 import (
 	"jungle-royale/message"
 	"jungle-royale/util"
-	"log"
 )
 
 type ChangingState struct {
@@ -39,7 +38,6 @@ func (cs *ChangingState) MakeSendingData() *message.ChangingState {
 	})
 
 	cs.PlayerDeadStateList.Range(func(pds PlayerDeadState) bool {
-		log.Println(pds)
 		playerDeadStateList = append(playerDeadStateList, pds.MakeSendingData())
 		cs.PlayerDeadStateList.Remove(pds)
 		return true
@@ -53,23 +51,23 @@ func (cs *ChangingState) MakeSendingData() *message.ChangingState {
 }
 
 type HitBulletState struct {
-	bulletId   string
+	bulletId   int
 	objectType int
-	objectId   string
+	objectId   int
 	X          float64
 	Y          float64
 	bulletType int
 }
 
-func NewHitBulletState(bulletId, objectId string, objectType int, x, y float64, bulletType int) HitBulletState {
+func NewHitBulletState(bulletId, objectId, objectType int, x, y float64, bulletType int) HitBulletState {
 	return HitBulletState{bulletId, objectType, objectId, x, y, bulletType}
 }
 
 func (hbs *HitBulletState) MakeSendingData() *message.HitBulletState {
 	return &message.HitBulletState{
 		ObjectType: int32(hbs.objectType),
-		BulletId:   hbs.bulletId,
-		ObjectId:   hbs.objectId,
+		BulletId:   int32(hbs.bulletId),
+		ObjectId:   int32(hbs.objectId),
 		X:          float32(hbs.X),
 		Y:          float32(hbs.Y),
 		BulletType: int32(hbs.bulletType),
@@ -84,21 +82,21 @@ const (
 )
 
 type GetItemState struct {
-	itemId   string
-	playerId string
+	itemId   int
+	playerId int
 	itemType int
 	X        float64
 	Y        float64
 }
 
-func NewGetItemState(itemId, playerId string, itemType int, x, y float64) GetItemState {
+func NewGetItemState(itemId, playerId, itemType int, x, y float64) GetItemState {
 	return GetItemState{itemId, playerId, itemType, x, y}
 }
 
 func (gis *GetItemState) MakeSendingData() *message.GetItemState {
 	return &message.GetItemState{
-		ItemId:   gis.itemId,
-		PlayerId: gis.playerId,
+		ItemId:   int32(gis.itemId),
+		PlayerId: int32(gis.playerId),
 		ItemType: int32(gis.itemType),
 		X:        float32(gis.X),
 		Y:        float32(gis.Y),
@@ -106,14 +104,14 @@ func (gis *GetItemState) MakeSendingData() *message.GetItemState {
 }
 
 type PlayerDeadState struct {
-	Killer      string
-	Dead        string
+	Killer      int
+	Dead        int
 	DyingStatus int
 	KillNum     int
 	Placement   int
 }
 
-func NewPlayerDeadState(killer string, dead string, ds int) *PlayerDeadState {
+func NewPlayerDeadState(killer, dead, ds int) *PlayerDeadState {
 	return &PlayerDeadState{
 		killer,
 		dead,
@@ -125,8 +123,8 @@ func NewPlayerDeadState(killer string, dead string, ds int) *PlayerDeadState {
 
 func (pd *PlayerDeadState) MakeSendingData() *message.PlayerDeadState {
 	return &message.PlayerDeadState{
-		KillerId:    pd.Killer,
-		DeadId:      pd.Dead,
+		KillerId:    int32(pd.Killer),
+		DeadId:      int32(pd.Dead),
 		DyingStatus: int32(pd.DyingStatus),
 		KillNum:     int32(pd.KillNum),
 		Placement:   int32(pd.Placement),
