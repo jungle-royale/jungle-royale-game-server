@@ -16,20 +16,21 @@ const (
 )
 
 type Tile struct {
-	IdxI           int
-	IdxJ           int
-	TileId         string
-	TileState      int
-	PhysicalObject *physical.Rectangle
-	ChildTile      *util.Set[*Tile]
-	ParentTile     *Tile
-	tileType       int
-	Environment    *util.Set[*EnvObject]
-	Depth          int
-	Mu             sync.Mutex
+	IdxI             int
+	IdxJ             int
+	TileId           int
+	TileState        int
+	PhysicalObject   *physical.Rectangle
+	ChildTile        *util.Set[*Tile]
+	ParentTile       *Tile
+	tileType         int
+	Environment      *util.Set[*EnvObject]
+	Depth            int
+	Mu               sync.Mutex
+	objectIdAllocate func() int
 }
 
-func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
+func NewTile(tileId int, x, y float64, idxi, idxj int, objectIdAllocate func() int) *Tile {
 	return &Tile{
 		IdxI:      idxi,
 		IdxJ:      idxj,
@@ -41,10 +42,11 @@ func NewTile(tileId string, x, y float64, idxi, idxj int) *Tile {
 			Width:  cons.CHUNK_LENGTH,
 			Length: cons.CHUNK_LENGTH,
 		},
-		ChildTile:   util.NewSyncSet[*Tile](),
-		ParentTile:  nil,
-		Environment: util.NewSyncSet[*EnvObject](),
-		Mu:          sync.Mutex{},
+		ChildTile:        util.NewSyncSet[*Tile](),
+		ParentTile:       nil,
+		Environment:      util.NewSyncSet[*EnvObject](),
+		Mu:               sync.Mutex{},
+		objectIdAllocate: objectIdAllocate,
 	}
 }
 
@@ -56,6 +58,7 @@ func (tile *Tile) SetTileState(tileState int) *Tile {
 func (tile *Tile) SetTileType(tileType int) *Tile {
 	tile.SetTileEnvironment(
 		tileType,
+		tile.objectIdAllocate(),
 		float64(tile.IdxI*cons.CHUNK_LENGTH),
 		float64(tile.IdxJ*cons.CHUNK_LENGTH),
 	)
@@ -64,7 +67,7 @@ func (tile *Tile) SetTileType(tileType int) *Tile {
 
 func (tile *Tile) MakeSendingData() *message.TileState {
 	return &message.TileState{
-		TileId:    tile.TileId,
+		TileId:    int32(tile.TileId),
 		TileState: int32(tile.TileState),
 		TileType:  int32(tile.tileType),
 		X:         float32(tile.PhysicalObject.X),

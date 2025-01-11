@@ -3,11 +3,10 @@ package game
 import (
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
-type ClientId string
+type ClientId int
 
 type Client struct {
 	mu             sync.Mutex
@@ -23,10 +22,8 @@ func NewClient(
 	serverClientId string,
 	conn *websocket.Conn,
 ) *Client {
-	id := uuid.New().String()
 	return &Client{
 		mu:             sync.Mutex{},
-		ID:             ClientId(id),
 		GameID:         gameId,
 		serverClientId: serverClientId,
 		conn:           conn,
@@ -35,12 +32,18 @@ func NewClient(
 }
 
 func (client *Client) write(data []byte) error {
+	// log.Printf("write start %s", client.serverClientId)
 	client.connMu.Lock()
 	defer client.connMu.Unlock()
-	return client.conn.WriteMessage(websocket.BinaryMessage, data)
+	// log.Println(len(data))
+	err := client.conn.WriteMessage(websocket.BinaryMessage, data)
+	// log.Printf("write end %s", client.serverClientId)
+	return err
 }
 
 func (client *Client) close() {
+	client.connMu.Lock()
+	defer client.connMu.Unlock()
 	client.conn.Close()
 	client.conn = nil
 }

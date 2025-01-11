@@ -31,4 +31,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "Generating python code in temp folder..."
+cd "$BASE_DIR" || exit
+protoc --proto_path=test_py --python_out=test_py test_py/message.proto
+if [ $? -ne 0 ]; then
+    echo "Failed to generate python code."
+    exit 1
+fi
+
 echo "Protobuf code generation completed successfully!"

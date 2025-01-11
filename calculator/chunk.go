@@ -9,19 +9,19 @@ import (
 
 type Chunk struct {
 	chunkNum   int
-	chunkTable [][][object.OBJECT_NUM]*util.Set[string]
+	chunkTable [][][object.OBJECT_NUM]*util.Set[int]
 }
 
 func NewChunk(chunkNum int) *Chunk {
 
 	newChunk := Chunk{chunkNum: chunkNum}
-	newChunk.chunkTable = make([][][object.OBJECT_NUM]*util.Set[string], chunkNum)
+	newChunk.chunkTable = make([][][object.OBJECT_NUM]*util.Set[int], chunkNum)
 
 	for i := 0; i < chunkNum; i++ {
-		newChunk.chunkTable[i] = make([][object.OBJECT_NUM]*util.Set[string], chunkNum)
+		newChunk.chunkTable[i] = make([][object.OBJECT_NUM]*util.Set[int], chunkNum)
 		for j := 0; j < chunkNum; j++ {
 			for k := 0; k < object.OBJECT_NUM; k++ {
-				newChunk.chunkTable[i][j][k] = util.NewSyncSet[string]()
+				newChunk.chunkTable[i][j][k] = util.NewSyncSet[int]()
 			}
 		}
 	}
@@ -82,7 +82,7 @@ func (chunk *Chunk) getChunkIndexSet(obj physical.Physical) *util.Set[ChunkIndex
 	return set
 }
 
-func (chunk *Chunk) RemoveKey(id string, objType int, set *util.Set[ChunkIndex]) {
+func (chunk *Chunk) RemoveKey(id, objType int, set *util.Set[ChunkIndex]) {
 	set.Range(func(ci ChunkIndex) bool {
 		if chunk.chunkNum <= ci.X {
 			ci.X = chunk.chunkNum - 1
@@ -99,7 +99,7 @@ func (chunk *Chunk) RemoveKey(id string, objType int, set *util.Set[ChunkIndex])
 	})
 }
 
-func (chunk *Chunk) AddKey(id string, objType int, set *util.Set[ChunkIndex]) {
+func (chunk *Chunk) AddKey(id, objType int, set *util.Set[ChunkIndex]) {
 	set.Range(func(ci ChunkIndex) bool {
 		if chunk.chunkNum <= ci.X {
 			ci.X = chunk.chunkNum - 1
@@ -116,7 +116,7 @@ func (chunk *Chunk) AddKey(id string, objType int, set *util.Set[ChunkIndex]) {
 	})
 }
 
-func (chunk *Chunk) GetObjectKeySet(i, j, objType int) *util.Set[string] {
+func (chunk *Chunk) GetObjectKeySet(i, j, objType int) *util.Set[int] {
 	if chunk.chunkNum <= i {
 		i = chunk.chunkNum - 1
 	} else if i < 0 {
@@ -130,7 +130,7 @@ func (chunk *Chunk) GetObjectKeySet(i, j, objType int) *util.Set[string] {
 	return chunk.chunkTable[i][j][objType]
 }
 
-func (chunk *Chunk) GetChunkKeySet(i, j int) *[object.OBJECT_NUM]*util.Set[string] {
+func (chunk *Chunk) GetChunkKeySet(i, j int) *[object.OBJECT_NUM]*util.Set[int] {
 	if chunk.chunkNum <= i {
 		i = chunk.chunkNum - 1
 	} else if i < 0 {

@@ -2,7 +2,6 @@ package physical
 
 import (
 	"jungle-royale/util"
-	"log"
 	"math"
 )
 
@@ -62,7 +61,6 @@ func (obj *Rectangle) IsCollide(opponent *Physical) bool { // opponent is pointe
 		}
 
 	default:
-		log.Printf("err: type is unmatched")
 		return false
 	}
 }

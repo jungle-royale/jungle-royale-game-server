@@ -4,34 +4,36 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"jungle-royale/cons"
 	"jungle-royale/network"
+	"jungle-royale/serverlog"
 	"jungle-royale/util"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"syscall"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/net/http2"
 )
 
-const (
-	MaxClientCount = 1000
-	Port           = "8000"
-	MaxGameNum     = 100
-)
+const Port = "8000"
 
 type GameId string // room create 할 때 받음
 
 type GameManager struct {
 	games                *util.Map[GameId, int]
 	gameRooms            []*Game // GameId: idx
+	gameRoomLock         sync.Mutex
 	emptyGameIdx         int
 	clientChannel        chan *Client
 	clientMessageChannel chan *ClientMessage
 	clientCloseChannel   chan *Client
 	debug                bool // production, development 환경 체크
 	debugClientCount     int  // debug 전용
+	gameManagerLogger    *serverlog.GameManagerLogger
 }
 
 func NewGameManager(
@@ -39,17 +41,20 @@ func NewGameManager(
 ) *GameManager {
 	socket := GameManager{
 		util.NewSyncMap[GameId, int](),
-		make([]*Game, MaxGameNum),
+		make([]*Game, cons.MaxGameNum),
+		sync.Mutex{},
 		0,
-		make(chan *Client, MaxClientCount),
-		make(chan *ClientMessage, MaxClientCount),
-		make(chan *Client, MaxClientCount),
+		make(chan *Client, cons.MaxClientCount),
+		make(chan *ClientMessage, cons.MaxClientCount),
+		make(chan *Client, cons.MaxClientCount),
 		debug,
 		0,
+		serverlog.NewGameManagerLogger(),
 	}
-	for i := 0; i < MaxGameNum; i++ {
+	for i := 0; i < cons.MaxGameNum; i++ {
 		socket.gameRooms[i] = NewGame(debug)
 	}
+	socket.gameManagerLogger.Log("New GameManager")
 	return &socket
 }
 
@@ -89,7 +94,8 @@ func (gameManager *GameManager) Listen() {
 
 	http.HandleFunc("/api/create-game", func(w http.ResponseWriter, r *http.Request) {
 
-		log.Printf("/api/create-game")
+		// log.Printf("/api/create-game")
+		gameManager.gameManagerLogger.Log("request /api/create-game")
 
 		w.Header().Set("Content-Type", "application/json")
 
@@ -109,12 +115,14 @@ func (gameManager *GameManager) Listen() {
 
 		_, exists := gameManager.games.Get(gameId)
 		if exists {
-			log.Printf("이미 존재하는 게임: %s", gameId)
+			// log.Printf("이미 존재하는 게임: %s", gameId)
+			gameManager.gameManagerLogger.Log("이미 존재하는 게임: " + string(gameId))
 			response := `{"success":false,"message":"Game room created successfully"}`
 			fmt.Fprintln(w, response)
 		} else {
 			if !gameManager.SetNewGame(gameId, req.MinPlayers, req.MaxPlayTime) {
-				log.Printf("모든 룸에서 게임 진행 중중")
+				// log.Printf("모든 룸에서 게임 진행 중")
+				gameManager.gameManagerLogger.Log("모든 룸에서 게임 진행 중")
 			} else {
 				response := `{"success":true,"message":"Game room created successfully"}`
 				fmt.Fprintln(w, response)
@@ -124,9 +132,12 @@ func (gameManager *GameManager) Listen() {
 
 	http.HandleFunc("/room", func(w http.ResponseWriter, r *http.Request) {
 
-		log.Printf("%s", r.URL.String())
+		// log.Printf("%s", r.URL.String())
+		gameManager.gameManagerLogger.Log("request " + r.URL.String())
 
 		var upgrader = websocket.Upgrader{
+			ReadBufferSize:  8192, // 읽기 버퍼 크기
+			WriteBufferSize: 8192, // 쓰기 버퍼 크기
 			CheckOrigin: func(r *http.Request) bool {
 				return true
 			},
@@ -167,12 +178,13 @@ func (gameManager *GameManager) Listen() {
 			}
 		}
 
-		log.Println("new client", gameId, serverClientId)
+		// log.Println("new client", gameId, serverClientId)
+		gameManager.gameManagerLogger.Log("new client " + serverClientId)
 
 		newClient := NewClient(GameId(gameId), serverClientId, conn)
 		gameManager.clientChannel <- newClient
 
-		log.Printf("Client %s connected", newClient.ID)
+		log.Printf("Client %d connected", newClient.ID)
 
 		for {
 			messageType, data, err := conn.ReadMessage()
@@ -182,9 +194,9 @@ func (gameManager *GameManager) Listen() {
 					websocket.CloseGoingAway,
 					websocket.CloseAbnormalClosure,
 				) {
-					log.Printf("Client %s disconnected unexpectedly: %v", newClient.ID, err)
+					log.Printf("Client %d disconnected unexpectedly: %v", newClient.ID, err)
 				} else {
-					log.Printf("Client %s disconnected: %v", newClient.ID, err)
+					log.Printf("Client %d disconnected: %v", newClient.ID, err)
 				}
 				gameManager.clientCloseChannel <- newClient
 				break
@@ -194,9 +206,11 @@ func (gameManager *GameManager) Listen() {
 		}
 	})
 
-	log.Printf("Server listened in port " + Port)
+	// log.Printf("Server listened in port " + Port)
+	gameManager.gameManagerLogger.Log("Server listened in port " + Port)
 
 	server := &http.Server{Addr: ":" + Port}
+	http2.ConfigureServer(server, &http2.Server{})
 	if err := server.ListenAndServe(); err != nil {
 
 		gameManager.games.Range(func(gi GameId, i int) bool {
@@ -234,22 +248,26 @@ func (gameManager *GameManager) sendStartMessage(gameId GameId) {
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Printf("Error encoding JSON: %v\n", err)
+		gameManager.gameManagerLogger.Log("Error encoding JSON: " + err.Error())
 		return
 	}
 
 	// HTTP POST 요청 보내기
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Printf("Error sending request: %v\n", err)
+		// fmt.Printf("Error sending request: %v\n", err)
+		gameManager.gameManagerLogger.Log("Error sending request: " + err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("Start message response: %s\n", resp.Status)
+	// fmt.Printf("Start message response: %s\n", resp.Status)
+	gameManager.gameManagerLogger.Log("Start message response: " + resp.Status)
 }
 
 func (gameManager *GameManager) sendEndMessage(gameId GameId) {
 	url := "http://web-api.eternalsnowman.com:8080"
+	// url := "http://172.16.155.128:8080"
 	if gameManager.debug {
 		url = "http://localhost:8080"
 	}
@@ -258,34 +276,39 @@ func (gameManager *GameManager) sendEndMessage(gameId GameId) {
 	// 요청 데이터 생성
 	gameIdx, ok := gameManager.games.Get(gameId)
 	if !ok {
-		log.Printf("no room: %s", gameId)
+		// log.Printf("no room: %s", gameId)
+		gameManager.gameManagerLogger.Log("no room: " + string(gameId))
 		return
 	}
 
 	game := gameManager.gameRooms[*gameIdx]
 	payload := network.EndMessageRequest{
 		GameID:  string(gameId),
-		GameLog: game.gameLogger.ReturnList(),
+		GameLog: game.gameRecorder.ReturnList(),
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		fmt.Printf("Error encoding JSON: %v\n", err)
+		// fmt.Printf("Error encoding JSON: %v\n", err)
+		gameManager.gameManagerLogger.Log("Error encoding JSON: " + err.Error())
 		return
 	}
 
 	// HTTP POST 요청 보내기
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Printf("Error sending request: %v\n", err)
+		// fmt.Printf("Error sending request: %v\n", err)
+		gameManager.gameManagerLogger.Log("Error sending request: " + err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("End message response: %s\n", resp.Status)
+	// fmt.Printf("End message response: %s\n", resp.Status)
+	gameManager.gameManagerLogger.Log("End message response: " + resp.Status)
 }
 
 func (gameManager *GameManager) sendPlayerLeaveMessage(gameId GameId, client *Client) {
 	url := "http://web-api.eternalsnowman.com:8080"
+	// url := "http://172.16.155.128:8080"
 	if gameManager.debug {
 		url = "http://localhost:8080"
 	}
@@ -298,19 +321,22 @@ func (gameManager *GameManager) sendPlayerLeaveMessage(gameId GameId, client *Cl
 	}
 	jsonData, err := json.Marshal(msg)
 	if err != nil {
-		fmt.Printf("Error encoding JSON: %v\n", err)
+		// fmt.Printf("Error encoding JSON: %v\n", err)
+		gameManager.gameManagerLogger.Log("Error encoding JSON: " + err.Error())
 		return
 	}
 
 	// HTTP POST 요청 보내기
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Printf("Error sending request: %v\n", err)
+		// fmt.Printf("Error sending request: %v\n", err)
+		gameManager.gameManagerLogger.Log("Error sending request: " + err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("leave message response: %s\n", resp.Status)
+	// fmt.Printf("leave message response: %s\n", resp.Status)
+	gameManager.gameManagerLogger.Log("End message response: " + resp.Status)
 }
 
 func (gameManager *GameManager) SetNewGame(
@@ -318,18 +344,9 @@ func (gameManager *GameManager) SetNewGame(
 	minPlayerNum int,
 	playingTime int,
 ) bool {
+	gameManager.gameRoomLock.Lock()
 	newGame := gameManager.gameRooms[gameManager.emptyGameIdx]
 	gameManager.games.Store(gameId, gameManager.emptyGameIdx)
-	last := gameManager.emptyGameIdx
-	for {
-		gameManager.emptyGameIdx++
-		if gameManager.emptyGameIdx == last {
-			return false
-		}
-		if !gameManager.gameRooms[gameManager.emptyGameIdx].IsPlaying() {
-			break
-		}
-	}
 	newGame.SetGame(
 		minPlayerNum,
 		playingTime,
@@ -342,9 +359,20 @@ func (gameManager *GameManager) SetNewGame(
 		func() { // 게임 종료
 			gameManager.handleGameEnd(gameId)
 		},
+		serverlog.NewGameLogger(gameManager.emptyGameIdx, string(gameId)),
 	)
-	newGame.SetReadyStatus().StartGame() // 플레이어 수, 게임 시간
-	log.Printf("New Game Room: %s, %d", gameId, gameManager.games.Length())
+	go newGame.SetReadyStatus().StartGame()
+	last := gameManager.emptyGameIdx
+	for {
+		gameManager.emptyGameIdx = (gameManager.emptyGameIdx + 1) % cons.MaxGameNum
+		if gameManager.emptyGameIdx == last {
+			return false
+		}
+		if !gameManager.gameRooms[gameManager.emptyGameIdx].IsPlaying() {
+			break
+		}
+	}
+	gameManager.gameRoomLock.Unlock()
 	return true
 }
 
@@ -363,7 +391,6 @@ func (gameManager *GameManager) handleGameEnd(gameId GameId) {
 		gameIdx, _ := gameManager.games.Get(gameId)
 		gameManager.sendEndMessage(gameId)
 		gameManager.games.Delete(gameId)
-		log.Printf("End Game: %s , (game counts: %d)", gameId, gameManager.games.Length())
 		gameManager.gameRooms[*gameIdx] = NewGame(gameManager.debug)
 	}
 }
@@ -373,7 +400,6 @@ func (gameManager *GameManager) handlePlayerLeave(gameId GameId, client *Client)
 		return
 	} else {
 		gameManager.sendPlayerLeaveMessage(gameId, client)
-		log.Printf("Player %s leave waiting room", client.ID)
 	}
 }
 
@@ -396,7 +422,7 @@ func (gameManager *GameManager) handleClientMessage(clientMessage *ClientMessage
 	if idx, exists := gameManager.games.Get(gameId); exists {
 		room := gameManager.gameRooms[*idx]
 		if room.IsPlaying() {
-			room.OnMessage(clientMessage.Data, string(clientId))
+			room.OnMessage(clientMessage.Data, int(clientId))
 			return
 		}
 	}

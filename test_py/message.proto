@@ -1,9 +1,5 @@
 syntax = "proto3";
 
-package message;
-
-option go_package = "/message";
-
 message Wrapper {
     oneof MessageType {
         ChangeAngle changeAngle = 1;

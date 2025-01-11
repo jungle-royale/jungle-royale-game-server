@@ -14,12 +14,13 @@ message Wrapper {
         GameCount gameCount = 6;
         GameInit gameInit = 7;
         GameStart gameStart = 8;
+        GameReconnect gameReconnect = 9;
     }
 }
 
 // server → client : init message
 message GameInit {
-    string id = 1;  // player id
+    int32 id = 1;  // player id
     int32 minPlayerNum = 2;
 }
 
@@ -31,6 +32,12 @@ message ChangeDir {
 
 message ChangeAngle {
     float angle = 1;
+}
+
+message GameReconnect {
+    int32 id = 1;
+    int32 minPlayerNum = 2;
+    int32 totalPlayerNum = 3; // null일 수 있음
 }
 
 // server → client
@@ -45,7 +52,7 @@ message GameState {
 }
 
 message PlayerState {
-    string id = 1;
+    int32 id = 1;
     float x = 2;
     float y = 3;
     int32 health = 4;
@@ -63,7 +70,7 @@ message ChangeBulletState {
 }
 
 message BulletState {
-    string bulletId = 1;
+    int32 bulletId = 1;
     int32 bulletType = 2;
     // 0: snow
     // 1: stone
@@ -83,23 +90,24 @@ message DoDash {
 
 message GameStart {
     int32 mapLength = 1;
+    int32 totalPlayerNum = 2;
 }
 
 message HealPackState {
-    string itemId = 1;
+    int32 itemId = 1;
     float x = 2;
     float y = 3;
 }
 
 message MagicItemState {
-    string itemId = 1;
+    int32 itemId = 1;
     int32 magicType = 2;
     float x = 3;
     float y = 4;
 }
 
 message TileState {
-    string tileId = 1;
+    int32 tileId = 1;
     float x = 2;
     float y = 3;
     int32 tileType = 4;
@@ -119,8 +127,8 @@ message HitBulletState {
     // 0: player
     // 4: environment object
 
-    string bulletId = 2;
-    string objectId = 3;
+    int32 bulletId = 2;
+    int32 objectId = 3;
     float x = 4;
     float y = 5;
     int32 bulletType = 6;
@@ -130,8 +138,8 @@ message HitBulletState {
 }
 
 message GetItemState {
-    string itemId = 1;
-    string playerId = 2;
+    int32 itemId = 1;
+    int32 playerId = 2;
     int32 itemType = 3;
     // 1: healpack
     // 2: stone magic
@@ -142,8 +150,8 @@ message GetItemState {
 }
 
 message PlayerDeadState {
-    string killerId = 1;
-    string deadId = 2;
+    int32 killerId = 1;
+    int32 deadId = 2;
     int32 dyingStatus = 3;
     // 1: snow
     // 2: stone

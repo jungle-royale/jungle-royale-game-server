@@ -1,12 +1,17 @@
 config:
-  target: "ws://localhost:8000/room?roomId=test&clientId=2BR-lPzcHUun4vUJWhPbgtYZZKPqHQ6sqY_lZKOY6T0"  # WebSocket 서버 주소
+  target: "ws://localhost:8000/room?roomId=test&clientId={{ $uuid }}"
+  # target: "ws://eternalsnowman.com/room?roomId=n3Sqbc9EtSpoThhrd0kybEwC6X6ENEigqvwLVWu9RpQ&clientId={{ $uuid }}"
+  # target: "ws://game-api.eternalsnowman.com:8000/room?roomId=n3Sqbc9EtSpoThhrd0kybEwC6X6ENEigqvwLVWu9RpQ&clientId=esLooXYhlTMmxtXlDrNPfHoIG3wWZ0c5K0kIC2FUKvA#no-back"
   phases:
     - duration: 1
-      arrivalRate: 99              # 초당 1명의 사용자 연결
-  processor: "./tester.js"        # JavaScript로 메시지 생성 위임
+      arrivalRate: 50
+  processor: "./tester.js"
+
 scenarios:
   - engine: "ws"
     flow:
+      - function: "randomMessage"
+      - think: 0.1
       - function: "randomMessage"
       - think: 0.1
       - function: "randomMessage"

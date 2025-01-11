@@ -4,8 +4,6 @@ import (
 	"jungle-royale/message"
 	"jungle-royale/physical"
 	"sync"
-
-	"github.com/google/uuid"
 )
 
 const HEAL_AMOUNT = 30
@@ -14,14 +12,14 @@ const HEALPACK_LENGTH = 0.3
 
 type HealPack struct {
 	mu             sync.Mutex
-	Id             string
+	Id             int
 	physicalObject physical.Physical
 }
 
-func NewHealPack(x, y float64) *HealPack {
+func NewHealPack(x, y float64, id int) *HealPack {
 	return &HealPack{
 		sync.Mutex{},
-		uuid.New().String(),
+		id,
 		physical.NewRectangle(x, y, HEALPACK_WIDTH, HEALPACK_LENGTH),
 	}
 }
@@ -42,7 +40,7 @@ func (heal *HealPack) SetLocation(x, y float64) {
 
 func (heal *HealPack) MakeSendingData() *message.HealPackState {
 	return &message.HealPackState{
-		ItemId: heal.Id,
+		ItemId: int32(heal.Id),
 		X:      float32(heal.physicalObject.GetX()),
 		Y:      float32(heal.physicalObject.GetY()),
 	}
@@ -52,6 +50,6 @@ func (heal *HealPack) GetObjectType() int {
 	return OBJECT_HEALPACK
 }
 
-func (heal *HealPack) GetObjectId() string {
+func (heal *HealPack) GetObjectId() int {
 	return heal.Id
 }

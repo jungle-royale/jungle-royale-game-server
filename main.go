@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"jungle-royale/game"
-	"log"
 	"os"
 	"runtime"
 	"strconv"
@@ -28,7 +27,7 @@ func main() {
 
 	configurationFromArgs(&cpu, &debug, &player, &time)
 
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	// log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 	// log.SetOutput(io.Discard)
 
 	runtime.GOMAXPROCS(cpu)
