@@ -259,11 +259,13 @@ func (game *Game) CalcGameTickLoop() {
 			game.state.ConfigMu.Lock()
 			game.calculator.CalcGameTickState()
 			game.state.ConfigMu.Unlock()
-			game.PlusEndCount()
-			game.CheckEndGame()
+			if !game.debug {
+				game.PlusEndCount()
+				game.CheckEndGame()
+			}
 		}()
 		game.loopState.calcLoopCheck++
-		if game.state.GameState == state.End {
+		if game.IsEndState() {
 			game.loopWaitGroup.Done()
 			break
 		}
@@ -332,7 +334,8 @@ func (game *Game) CalcSecLoop() {
 			}
 			game.calculator.SecLoop()
 		}()
-		if game.state.GameState == state.End {
+
+		if game.IsEndState() {
 			game.loopWaitGroup.Done()
 			break
 		}
@@ -418,7 +421,7 @@ func (game *Game) BroadcastLoop() {
 
 		}()
 		game.loopState.broadcastLoopCheck++
-		if game.state.GameState == state.End {
+		if game.IsEndState() {
 			game.loopWaitGroup.Done()
 			break
 		}
@@ -432,8 +435,6 @@ func (game *Game) OnMessage(data []byte, id int) {
 func (game *Game) OnClient(client *Client) {
 
 	if game.IsEndState() {
-		// game.alertGameEnd()
-		game.state.GameState = state.End
 		client.close()
 		return
 	}
@@ -476,6 +477,7 @@ func (game *Game) OnClose(client *Client) {
 
 	if game.clients.Length() == 0 {
 		log.Println("clinet's count zero")
+
 		game.PlusEndCount()
 	}
 
@@ -565,6 +567,9 @@ func (game *Game) broadcast(data []byte) {
 }
 
 func (game *Game) IsPlaying() bool {
+	if game.debug {
+		return true
+	}
 	if game.state.GameState == state.Empty {
 		return false
 	} else {
@@ -581,7 +586,6 @@ func (game *Game) CheckEndGame() {
 	if game.endTickCount == END_GAME_MAX_TICK_COUNT {
 		// log.Print("alert game end")
 		game.gameLogger.Log("alert game end")
-		// game.alertGameEnd()
 		game.state.GameState = state.End
 	} else {
 		return
@@ -626,6 +630,9 @@ func (game *Game) ResetEndCount() {
 }
 
 func (game *Game) IsEndState() bool {
+	if game.debug {
+		return false
+	}
 	return game.state.GameState == state.End
 }
 
@@ -650,15 +657,16 @@ func (game *Game) GameStateCheckLoop() {
 		// }
 		// game.loopState.lastBroadcastLoopCheck = game.loopState.broadcastLoopCheck
 
-		if game.state.GameState == state.End {
+		if game.IsEndState() {
 			game.loopWaitGroup.Done()
+			game.gameLogger.Log("🚀 break")
 			break
 		}
 
-		calcLoopInSec := game.loopState.calcLoopCheck - game.loopState.lastCalcLoopCheck
 		game.loopState.lastCalcLoopCheck = game.loopState.calcLoopCheck
-		broadCastLoopInSec := game.loopState.broadcastLoopCheck - game.loopState.lastBroadcastLoopCheck
+		// calcLoopInSec := game.loopState.calcLoopCheck - game.loopState.lastCalcLoopCheck
+		// broadCastLoopInSec := game.loopState.broadcastLoopCheck - game.loopState.lastBroadcastLoopCheck
 		game.loopState.lastBroadcastLoopCheck = game.loopState.broadcastLoopCheck
-		game.gameLogger.Log("calc, broad, player, last, size: " + fmt.Sprint(calcLoopInSec) + " " + fmt.Sprint(broadCastLoopInSec) + " " + fmt.Sprint(game.state.Players.Length()) + " " + fmt.Sprint(game.state.LastGameTick) + " " + fmt.Sprint(game.broadcastDataSize))
+		// game.gameLogger.Log("calc, broad, player, last, size: " + fmt.Sprint(calcLoopInSec) + " " + fmt.Sprint(broadCastLoopInSec) + " " + fmt.Sprint(game.state.Players.Length()) + " " + fmt.Sprint(game.state.LastGameTick) + " " + fmt.Sprint(game.broadcastDataSize))
 	}
 }
