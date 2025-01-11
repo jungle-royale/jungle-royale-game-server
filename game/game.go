@@ -13,7 +13,6 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"strconv"
 	"sync"
 	"time"
 
@@ -71,6 +70,7 @@ type Game struct {
 	loopWaitGroup     sync.WaitGroup
 	ClientIdAllocator *ClientIdAllocator
 	ObjectIdAllocator *object.ObjectIdAllocator
+	broadcastDataSize int
 }
 
 // playing time - second
@@ -92,6 +92,7 @@ func NewGame(debug bool) *Game {
 		loopWaitGroup:     sync.WaitGroup{},
 		ClientIdAllocator: NewClientIdAllocator(),
 		ObjectIdAllocator: objectIdAllocator,
+		broadcastDataSize: 0,
 	}
 	game.calculator = calculator.NewCalculator(
 		gameState,
@@ -217,7 +218,7 @@ func (game *Game) StartGame() *Game {
 
 	game.gameLogger.Log("init game")
 
-	// game.loopWaitGroup.Add(4)
+	game.loopWaitGroup.Add(4)
 
 	go game.CalcGameTickLoop() // start main loop
 	go game.BroadcastLoop()    // broadcast to client
@@ -225,11 +226,16 @@ func (game *Game) StartGame() *Game {
 
 	go game.GameStateCheckLoop()
 
-	// game.loopWaitGroup.Wait()
+	game.loopWaitGroup.Wait()
 
-	// game.gameLogger.Log("Game End")
+	game.gameLogger.Log("Game End")
 
-	// go game.alertGameEnd()
+	game.clients.Range(func(ci ClientId, c *Client) bool {
+		c.close()
+		return true
+	})
+
+	go game.alertGameEnd()
 
 	return game
 }
@@ -249,13 +255,16 @@ func (game *Game) CalcGameTickLoop() {
 					game.gameLogger.Log("Recover CalcLoop Panic: " + fmt.Sprintf("%v", r))
 				}
 			}()
+
+			game.state.ConfigMu.Lock()
 			game.calculator.CalcGameTickState()
+			game.state.ConfigMu.Unlock()
 			game.PlusEndCount()
 			game.CheckEndGame()
 		}()
 		game.loopState.calcLoopCheck++
 		if game.state.GameState == state.End {
-			// game.loopWaitGroup.Done()
+			game.loopWaitGroup.Done()
 			break
 		}
 	}
@@ -294,7 +303,6 @@ func (game *Game) CalcSecLoop() {
 				}
 
 				log.Printf("game play in %d", gameStartCount)
-
 				game.broadcast(data)
 
 				gameStartCount--
@@ -325,7 +333,7 @@ func (game *Game) CalcSecLoop() {
 			game.calculator.SecLoop()
 		}()
 		if game.state.GameState == state.End {
-			// game.loopWaitGroup.Done()
+			game.loopWaitGroup.Done()
 			break
 		}
 	}
@@ -411,7 +419,7 @@ func (game *Game) BroadcastLoop() {
 		}()
 		game.loopState.broadcastLoopCheck++
 		if game.state.GameState == state.End {
-			// game.loopWaitGroup.Done()
+			game.loopWaitGroup.Done()
 			break
 		}
 	}
@@ -445,7 +453,6 @@ func (game *Game) OnClient(client *Client) {
 			game.playerNum++
 			client.ID = ClientId(game.ClientIdAllocator.AllocateClientId())
 			game.SetPlayer(client)
-			log.Print(client.ID)
 			game.clients.Store(client.ID, client)
 			game.serverClientTable.Store(client.serverClientId, ClientId(client.ID))
 		} else {
@@ -524,10 +531,7 @@ func (game *Game) SetPlayer(client *Client) {
 		log.Printf("Failed to marshal GameInit: %v", err)
 		return
 	}
-	if err := client.write(data); err != nil {
-		log.Printf("Failed to send GameInit message to client %d: %v", clientId, err)
-		return
-	}
+	client.write(data)
 }
 
 func (game *Game) SetReconnectionPlayer(client *Client, lastClientId ClientId) {
@@ -547,22 +551,14 @@ func (game *Game) SetReconnectionPlayer(client *Client, lastClientId ClientId) {
 		game.gameLogger.Log("Failed to marshal GameInit: " + err.Error())
 		return
 	}
-	if err := client.write(data); err != nil {
-		// log.Printf("Failed to send GameInit message to client %s: %v", lastClientId, err)
-		game.gameLogger.Log("Failed to send GameInit message to client " + strconv.Itoa(int(lastClientId)))
-		return
-	}
+	client.write(data)
 }
 
 func (game *Game) broadcast(data []byte) {
-	// log.Printf("\n\nnew broadcast")
+	game.broadcastDataSize = len(data)
 	game.clients.Range(func(id ClientId, client *Client) bool {
 		// log.Println(client)
-		if err := client.write(data); err != nil {
-			log.Printf("Failed to send message to client %d: %v", id, err)
-			client.close()
-			game.clients.Delete(id)
-		}
+		client.write(data)
 		return true
 	})
 	// log.Printf("end broadcast")
@@ -655,7 +651,7 @@ func (game *Game) GameStateCheckLoop() {
 		// game.loopState.lastBroadcastLoopCheck = game.loopState.broadcastLoopCheck
 
 		if game.state.GameState == state.End {
-			// game.loopWaitGroup.Done()
+			game.loopWaitGroup.Done()
 			break
 		}
 
@@ -663,6 +659,6 @@ func (game *Game) GameStateCheckLoop() {
 		game.loopState.lastCalcLoopCheck = game.loopState.calcLoopCheck
 		broadCastLoopInSec := game.loopState.broadcastLoopCheck - game.loopState.lastBroadcastLoopCheck
 		game.loopState.lastBroadcastLoopCheck = game.loopState.broadcastLoopCheck
-		game.gameLogger.Log("calc, broadcast, lastplayer, lasttick: " + fmt.Sprint(calcLoopInSec) + " " + fmt.Sprint(broadCastLoopInSec) + " " + fmt.Sprint(game.state.Players.Length()) + " " + fmt.Sprint(game.state.LastGameTick))
+		game.gameLogger.Log("calc, broad, player, last, size: " + fmt.Sprint(calcLoopInSec) + " " + fmt.Sprint(broadCastLoopInSec) + " " + fmt.Sprint(game.state.Players.Length()) + " " + fmt.Sprint(game.state.LastGameTick) + " " + fmt.Sprint(game.broadcastDataSize))
 	}
 }
