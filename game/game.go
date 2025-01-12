@@ -459,12 +459,37 @@ func (game *Game) OnClient(client *Client) {
 		} else {
 			log.Printf("fail to reconnect: %s", client.serverClientId)
 			client.close()
+			return
 		}
 	}
 
 	if game.clients.Length() > 0 {
 		game.ResetEndCount()
 	}
+
+	currentPlayerList := make([]*message.CurrentPlayers, 0)
+	game.clients.Range(func(ci ClientId, c *Client) bool {
+		currentPlayerList = append(currentPlayerList, &message.CurrentPlayers{
+			PlayerId:   int32(c.ID),
+			PlayerName: c.userName,
+		})
+		return true
+	})
+
+	data, err := proto.Marshal(&message.Wrapper{
+		MessageType: &message.Wrapper_NewUser{
+			NewUser: &message.NewUser{
+				CurrentPlayers: currentPlayerList,
+			},
+		},
+	})
+
+	if err != nil {
+		log.Printf("Failed to marshal GameState: %v", err)
+		return
+	}
+
+	game.broadcast(data)
 
 	game.gameLogger.Log("On Client " + client.serverClientId)
 }

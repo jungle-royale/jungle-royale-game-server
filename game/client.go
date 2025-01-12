@@ -14,6 +14,7 @@ type Client struct {
 	ID             ClientId
 	GameID         GameId
 	serverClientId string
+	userName       string
 	conn           *websocket.Conn
 	sendChan       chan []byte
 	isObserver     bool
@@ -22,6 +23,7 @@ type Client struct {
 func NewClient(
 	gameId GameId,
 	serverClientId string,
+	userName string,
 	conn *websocket.Conn,
 	isObserver bool,
 ) *Client {
@@ -29,6 +31,7 @@ func NewClient(
 		mu:             sync.Mutex{},
 		GameID:         gameId,
 		serverClientId: serverClientId,
+		userName:       userName,
 		conn:           conn,
 		sendChan:       make(chan []byte, 4),
 		isObserver:     isObserver,
