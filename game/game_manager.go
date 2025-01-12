@@ -62,7 +62,11 @@ func (gameManager *GameManager) Listen() {
 
 	go func() {
 		for client := range gameManager.clientChannel {
-			go gameManager.setClient(client)
+			if client.isObserver {
+				go gameManager.setObserver(client)
+			} else {
+				go gameManager.setClient(client)
+			}
 		}
 	}()
 
@@ -130,6 +134,73 @@ func (gameManager *GameManager) Listen() {
 		}
 	})
 
+	http.HandleFunc("/observer", func(w http.ResponseWriter, r *http.Request) {
+
+		gameManager.gameManagerLogger.Log("request " + r.URL.String())
+
+		var upgrader = websocket.Upgrader{
+			ReadBufferSize:  8192, // 읽기 버퍼 크기
+			WriteBufferSize: 8192, // 쓰기 버퍼 크기
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		}
+
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Printf("Failed to upgrade to WebSocket: %v", err)
+			return
+		}
+		defer conn.Close()
+
+		tcpConn := gameManager.getTCPConn(conn)
+		if tcpConn != nil {
+			if err := gameManager.setNoDelay(tcpConn); err != nil {
+				log.Println("Failed to disable Nagle:", err)
+			}
+		}
+
+		var gameId string
+
+		if gameManager.debug {
+			gameId = "test"
+			gameManager.debugClientCount += 1
+		} else {
+			gameId = r.URL.Query().Get("roomId")
+			if gameId == "" {
+				http.Error(w, "Missing gameId query parameter", http.StatusBadRequest)
+				return
+			}
+		}
+
+		// log.Println("new client", gameId, serverClientId)
+		gameManager.gameManagerLogger.Log("new observer")
+
+		newClient := NewClient(GameId(gameId), "", conn, true)
+		gameManager.clientChannel <- newClient
+
+		log.Printf("Client %d connected", newClient.ID)
+
+		for {
+			messageType, data, err := conn.ReadMessage()
+			if err != nil {
+				if websocket.IsUnexpectedCloseError(
+					err,
+					websocket.CloseGoingAway,
+					websocket.CloseAbnormalClosure,
+				) {
+					log.Printf("Client %d disconnected unexpectedly: %v", newClient.ID, err)
+				} else {
+					log.Printf("Client %d disconnected: %v", newClient.ID, err)
+				}
+				gameManager.clientCloseChannel <- newClient
+				break
+			}
+
+			gameManager.clientMessageChannel <- NewClientMessage(messageType, newClient.GameID, newClient.ID, data)
+		}
+	})
+
 	http.HandleFunc("/room", func(w http.ResponseWriter, r *http.Request) {
 
 		// log.Printf("%s", r.URL.String())
@@ -181,7 +252,7 @@ func (gameManager *GameManager) Listen() {
 		// log.Println("new client", gameId, serverClientId)
 		gameManager.gameManagerLogger.Log("new client " + serverClientId)
 
-		newClient := NewClient(GameId(gameId), serverClientId, conn)
+		newClient := NewClient(GameId(gameId), serverClientId, conn, false)
 		gameManager.clientChannel <- newClient
 
 		log.Printf("Client %d connected", newClient.ID)
@@ -414,6 +485,16 @@ func (gameManager *GameManager) setClient(client *Client) {
 
 	log.Printf("New Client / No Room: client is.. %s, %d", client.GameID, gameManager.games.Length())
 	client.close()
+}
+
+func (gameManager *GameManager) setObserver(client *Client) {
+	if idx, exists := gameManager.games.Get(client.GameID); exists {
+		room := gameManager.gameRooms[*idx]
+		if room.IsPlaying() {
+			room.OnObserver(client)
+			return
+		}
+	}
 }
 
 func (gameManager *GameManager) handleClientMessage(clientMessage *ClientMessage) {
