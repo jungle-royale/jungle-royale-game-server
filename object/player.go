@@ -171,6 +171,8 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 		IsDashing:    player.isDashing,
 		IsBurn:       burn,
 		IsShooting:   player.IsShooting,
+		Dx:           float32(player.physicalObject.GetDx()),
+		Dy:           float32(player.physicalObject.GetDy()),
 	}
 }
 
