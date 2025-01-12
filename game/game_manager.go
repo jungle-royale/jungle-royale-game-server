@@ -277,6 +277,8 @@ func (gameManager *GameManager) Listen() {
 		}
 	})
 
+	gameManager.SetServerManager()
+
 	// log.Printf("Server listened in port " + Port)
 	gameManager.gameManagerLogger.Log("Server listened in port " + Port)
 
@@ -318,7 +320,7 @@ func (gameManager *GameManager) sendStartMessage(gameId GameId) {
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		fmt.Printf("Error encoding JSON: %v\n", err)
+		// fmt.Printf("Error encoding JSON: %v\n", err)
 		gameManager.gameManagerLogger.Log("Error encoding JSON: " + err.Error())
 		return
 	}

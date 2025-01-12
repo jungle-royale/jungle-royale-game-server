@@ -39,3 +39,7 @@ func NewGameLogger(gameIdx int, gameName string) *GameLogger {
 func (gl *GameLogger) Log(logString string) {
 	log.Printf("(Game[%d] \"%s\") %s", gl.gameIdx, gl.gameName, logString)
 }
+
+func (gl *GameLogger) GetGameName() string {
+	return gl.gameName
+}
