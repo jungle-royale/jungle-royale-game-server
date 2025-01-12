@@ -85,18 +85,25 @@ func NewPlayer(id int, x, y float64) *Player {
 }
 
 func (player *Player) CreateBullet(bulletid int) *Bullet {
-	if player.ShootingCoolTime > 0 || player.isDashing || player.BulletGauge < GaugePerBullet {
+	if player.ShootingCoolTime > 0 ||
+		player.isDashing ||
+		(player.BulletGauge < GaugePerBullet && player.MagicType == NONE_MAGIC) {
 		return nil
 	}
 	player.Mu.Lock()
 	player.ShootingCoolTime = SHOOTING_COOLTIME
 	player.BulletGauge -= GaugePerBullet
 	player.BulletGaugeRecoverStart = GaugeRecoverStartTick
+	bulletType := player.MagicType
+	if player.BulletGauge <= 0 {
+		player.MagicType = NONE_MAGIC
+		player.BulletGauge = MaxBulletGauage
+	}
 	player.Mu.Unlock()
 	newBullet := NewBullet(
 		bulletid,
 		player.id,
-		player.MagicType,
+		bulletType,
 		player.physicalObject.GetX(),
 		player.physicalObject.GetY(),
 		player.angle,
@@ -149,9 +156,11 @@ func (player *Player) CalcGameTick() {
 		}
 	}
 	if player.BulletGaugeRecoverStart <= 0 {
-		player.BulletGauge += GaugeRecoverPerTick
-		if player.BulletGauge > MaxBulletGauage {
-			player.BulletGauge = MaxBulletGauage
+		if player.MagicType == NONE_MAGIC {
+			player.BulletGauge += GaugeRecoverPerTick
+			if player.BulletGauge > MaxBulletGauage {
+				player.BulletGauge = MaxBulletGauage
+			}
 		}
 	} else {
 		player.BulletGaugeRecoverStart--
@@ -197,6 +206,7 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 		IsShooting:   player.IsShooting,
 		Dx:           float32(player.physicalObject.GetDx()),
 		Dy:           float32(player.physicalObject.GetDy()),
+		BulletGage:   int32(player.BulletGauge),
 	}
 }
 
@@ -251,6 +261,7 @@ func (player *Player) GetHealPack() {
 func (player *Player) GetMagic(magicType int) {
 	player.Mu.Lock()
 	player.MagicType = magicType
+	player.BulletGauge = MaxBulletGauage
 	player.Mu.Unlock()
 }
 
