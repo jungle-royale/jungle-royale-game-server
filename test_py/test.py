@@ -92,7 +92,7 @@ async def main():
         print(f"create {rn} rooms")
         print()
         
-        mp = min_player -1
+        mp = min_player
         connect_websocket_tasks = [connect_websocket(i, j) for i in range(rn) for j in range(mp)]
         await asyncio.gather(*connect_websocket_tasks)
         print(f"{rn * mp} users connect")

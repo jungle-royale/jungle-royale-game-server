@@ -19,7 +19,7 @@ const SHOOTING_COOLTIME = 10 // 0.1 sec
 
 // bullet gage
 const MaxBulletGauage = 1000
-const GaugePerBullet = 500
+const GaugePerBullet = 50
 const GaugeRecoverPerTick = 6
 const GaugeRecoverStartTick = 20
 

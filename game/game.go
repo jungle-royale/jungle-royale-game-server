@@ -469,6 +469,20 @@ func (game *Game) OnClient(client *Client) {
 	game.gameLogger.Log("On Client " + client.serverClientId)
 }
 
+func (game *Game) OnObserver(client *Client) {
+
+	if game.IsEndState() {
+		client.close()
+		return
+	}
+
+	log.Printf("new game client's server client id: %s", client.serverClientId)
+	client.ID = ClientId(game.ClientIdAllocator.AllocateClientId())
+	game.clients.Store(client.ID, client)
+
+	game.gameLogger.Log("On Observer")
+}
+
 func (game *Game) OnClose(client *Client) {
 	game.clients.Delete(ClientId(client.ID))
 	if game.state.GameState == state.Waiting {
