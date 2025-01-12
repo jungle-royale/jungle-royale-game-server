@@ -176,7 +176,7 @@ func (gameManager *GameManager) Listen() {
 		// log.Println("new client", gameId, serverClientId)
 		gameManager.gameManagerLogger.Log("new observer")
 
-		newClient := NewClient(GameId(gameId), "", conn, true)
+		newClient := NewClient(GameId(gameId), "", "", conn, true)
 		gameManager.clientChannel <- newClient
 
 		log.Printf("Client %d connected", newClient.ID)
@@ -231,6 +231,7 @@ func (gameManager *GameManager) Listen() {
 
 		var gameId string
 		var serverClientId string
+		var userName string
 
 		if gameManager.debug {
 			gameId = "test"
@@ -247,12 +248,17 @@ func (gameManager *GameManager) Listen() {
 				http.Error(w, "Missing serverClientId query parameter", http.StatusBadRequest)
 				return
 			}
+			userName = r.URL.Query().Get("username")
+			if userName == "" {
+				http.Error(w, "Missing userName query parameter", http.StatusBadRequest)
+				return
+			}
 		}
 
 		// log.Println("new client", gameId, serverClientId)
 		gameManager.gameManagerLogger.Log("new client " + serverClientId)
 
-		newClient := NewClient(GameId(gameId), serverClientId, conn, false)
+		newClient := NewClient(GameId(gameId), serverClientId, userName, conn, false)
 		gameManager.clientChannel <- newClient
 
 		log.Printf("Client %d connected", newClient.ID)
