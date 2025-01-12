@@ -71,7 +71,7 @@ func NewPlayer(id int, x, y float64) *Player {
 		0,
 		0,
 		100,
-		BULLET_NONE,
+		NONE_MAGIC,
 		NewPlayerDeadState(-1, id, DYING_NONE),
 		physical.NewCircle(x, y, PLAYER_RADIOUS),
 		false,
@@ -95,7 +95,7 @@ func (player *Player) CreateBullet(bulletid int) *Bullet {
 	player.BulletGauge -= GaugePerBullet
 	player.BulletGaugeRecoverStart = GaugeRecoverStartTick
 	bulletType := player.MagicType
-	if player.BulletGauge <= 0 {
+	if player.MagicType != NONE_MAGIC && player.BulletGauge <= 0 {
 		player.MagicType = NONE_MAGIC
 		player.BulletGauge = MaxBulletGauage
 	}

@@ -9,7 +9,7 @@ import httpx
 websocket_array = []
 http_url = "http://localhost:8000"
 ws_url = "ws://localhost:8000"
-min_player = 30
+min_player = 3
 room_num = 1
 
 async def create_room(room_num):
@@ -26,7 +26,7 @@ async def create_room(room_num):
 
 # roomId, clientId: int
 async def connect_websocket(roomId, clientId):
-    websocket_url = ws_url + f"/room?roomId=room{roomId}&clientId=r{roomId}c{clientId}"
+    websocket_url = ws_url + f"/room?roomId=room{roomId}&clientId=r{roomId}c{clientId}&username={'이름'}"
     # websocket_url = ws_url + f"/room?roomId=test&clientId=r{roomId}c{clientId}"
     websocket = await websockets.connect(websocket_url)
 
