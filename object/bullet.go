@@ -73,9 +73,10 @@ func (bullet *Bullet) IsValid() bool {
 
 func (bullet *Bullet) MakeSendingData() *message.BulletState {
 	return &message.BulletState{
-		BulletId: int32(bullet.bulletId),
-		X:        float32(bullet.physicalObject.GetX()),
-		Y:        float32(bullet.physicalObject.GetY()),
+		BulletId:   int32(bullet.bulletId),
+		BulletType: int32(bullet.BulletType),
+		X:          float32(bullet.physicalObject.GetX()),
+		Y:          float32(bullet.physicalObject.GetY()),
 	}
 }
 

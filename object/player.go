@@ -17,6 +17,12 @@ const PLAYER_RADIOUS = 0.5
 const EPSILON = 1e-9
 const SHOOTING_COOLTIME = 10 // 0.1 sec
 
+// bullet gage
+const MaxBulletGauage = 1000
+const GaugePerBullet = 500
+const GaugeRecoverPerTick = 6
+const GaugeRecoverStartTick = 20
+
 // dying status
 const (
 	DYING_NONE = iota
@@ -27,24 +33,29 @@ const (
 )
 
 type Player struct {
-	Mu                 sync.Mutex
-	id                 int
-	dir                float64 // (dx, dy)
-	angle              float64 // degree
-	speed              float64
-	isMoveing          bool
-	isDashing          bool
-	dashTime           int
-	dashCoolTime       int
-	health             int
-	MagicType          int
-	DyingStatus        *PlayerDeadState
-	physicalObject     physical.Physical
-	IsShooting         bool
-	ShootingCoolTime   int
+	Mu             sync.Mutex
+	id             int
+	dir            float64 // (dx, dy)
+	angle          float64 // degree
+	speed          float64
+	isMoveing      bool
+	isDashing      bool
+	dashTime       int
+	dashCoolTime   int
+	health         int
+	MagicType      int
+	DyingStatus    *PlayerDeadState
+	physicalObject physical.Physical
+
+	IsShooting       bool
+	ShootingCoolTime int
+
 	FireDamageTickTime int
 	FireDamageCount    int
 	FireDamageOwner    int // 불 틱데미지 입힌사람
+
+	BulletGauge             int
+	BulletGaugeRecoverStart int
 }
 
 func NewPlayer(id int, x, y float64) *Player {
@@ -68,17 +79,22 @@ func NewPlayer(id int, x, y float64) *Player {
 		0,
 		0,
 		-1,
+		MaxBulletGauage,
+		0,
 	}
 }
 
-func (player *Player) CreateBullet(id int) *Bullet {
-	if player.ShootingCoolTime > 0 || player.isDashing {
+func (player *Player) CreateBullet(bulletid int) *Bullet {
+	if player.ShootingCoolTime > 0 || player.isDashing || player.BulletGauge < GaugePerBullet {
 		return nil
-	} else {
-		player.ShootingCoolTime = SHOOTING_COOLTIME
 	}
+	player.Mu.Lock()
+	player.ShootingCoolTime = SHOOTING_COOLTIME
+	player.BulletGauge -= GaugePerBullet
+	player.BulletGaugeRecoverStart = GaugeRecoverStartTick
+	player.Mu.Unlock()
 	newBullet := NewBullet(
-		id,
+		bulletid,
 		player.id,
 		player.MagicType,
 		player.physicalObject.GetX(),
@@ -131,6 +147,14 @@ func (player *Player) CalcGameTick() {
 			player.FireDamageCount--
 			player.DyingStatus.Killer = player.FireDamageOwner
 		}
+	}
+	if player.BulletGaugeRecoverStart <= 0 {
+		player.BulletGauge += GaugeRecoverPerTick
+		if player.BulletGauge > MaxBulletGauage {
+			player.BulletGauge = MaxBulletGauage
+		}
+	} else {
+		player.BulletGaugeRecoverStart--
 	}
 	player.Mu.Unlock()
 }
