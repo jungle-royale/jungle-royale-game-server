@@ -59,6 +59,8 @@ message PlayerState {
     bool isDashing = 9;
     bool isBurn = 10;
     bool isShooting = 11;
+    float dx = 12;
+    float dy = 13;
 }
 
 message ChangeBulletState {
