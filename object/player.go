@@ -18,10 +18,10 @@ const EPSILON = 1e-9
 const SHOOTING_COOLTIME = 10 // 0.1 sec
 
 // bullet gage
-const MaxBulletGauage = 1000
-const GaugePerBullet = 50
-const GaugeRecoverPerTick = 6
-const GaugeRecoverStartTick = 20
+const MaxBulletGauage = 600
+const GaugePerBullet = 30
+const GaugeRecoverPerTick = 5
+const GaugeRecoverStartTick = 60
 
 // dying status
 const (
