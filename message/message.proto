@@ -59,6 +59,7 @@ message GameState {
     repeated TileState tileState = 5;
     int32 lastSec = 6;
     ChangingState changingState = 7;
+    int64 sendingTime = 8;
 }
 
 message PlayerState {
