@@ -443,7 +443,6 @@ func (game *Game) OnClient(client *Client) {
 	if exists {
 		log.Printf("reconnection: %s", client.serverClientId)
 		game.SetReconnectionPlayer(client, *lastClientId)
-		client.ID = ClientId(game.ClientIdAllocator.AllocateClientId())
 		game.clients.Store(client.ID, client)
 		// MARK: reconnection 처리 후에 store 해야 함!
 		// - broad cast 하기 전에, client한테 reconnection 메시지를 보내야 함
