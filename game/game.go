@@ -399,6 +399,7 @@ func (game *Game) BroadcastLoop() {
 				MagicItemState: magicItemList,
 				TileState:      tileStateList,
 				ChangingState:  game.state.ChangingState.MakeSendingData(),
+				SendingTime:    int64(time.Now().UnixMilli()),
 			}
 
 			// log.Println(gameState)
