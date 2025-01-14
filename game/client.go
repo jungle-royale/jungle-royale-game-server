@@ -35,7 +35,7 @@ func NewClient(
 		serverClientId: serverClientId,
 		userName:       userName,
 		conn:           conn,
-		sendChan:       make(chan []byte, 4),
+		sendChan:       make(chan []byte, 200),
 		isObserver:     isObserver,
 	}
 	go newClient.SendData()

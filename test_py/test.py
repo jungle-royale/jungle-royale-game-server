@@ -7,10 +7,10 @@ import time
 import httpx
 
 websocket_array = []
-# http_url = "http://localhost:8000"
-http_url = "http://game-api.eternalsnowman.com:8080"
-# ws_url = "ws://localhost:8000"
-ws_url = "ws://game-api.eternalsnowman.com:8080"
+http_url = "http://localhost:8000"
+# http_url = "http://game-api.eternalsnowman.com:8080"
+ws_url = "ws://localhost:8000"
+# ws_url = "ws://game-api.eternalsnowman.com:8080"
 min_player = 100
 room_num = 1
 
@@ -95,7 +95,7 @@ async def main():
         print(f"create {rn} rooms")
         print()
         
-        mp = min_player
+        mp = min_player -1
         connect_websocket_tasks = [connect_websocket(i, j) for i in range(rn) for j in range(mp)]
         await asyncio.gather(*connect_websocket_tasks)
         print(f"{rn * mp} users connect")

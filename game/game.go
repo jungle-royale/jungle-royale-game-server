@@ -531,6 +531,8 @@ func (game *Game) OnClose(client *Client) {
 	if game.state.GameState == state.Waiting {
 		game.playerNum--
 		game.clients.Delete(ClientId(client.ID))
+		game.state.Players.Delete(int(client.ID))
+		game.serverClientTable.Delete(client.serverClientId)
 		go game.alertPlayerLeavae(client)
 	}
 
