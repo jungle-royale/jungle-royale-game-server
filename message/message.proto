@@ -23,6 +23,8 @@ message Wrapper {
 message GameInit {
     int32 id = 1;  // player id
     int32 minPlayerNum = 2;
+    int32 bulletMaxTick = 3;
+    float bulletSpeed = 4;
 }
 
 // client → server : changing state
@@ -39,6 +41,8 @@ message GameReconnect {
     int32 id = 1;
     int32 minPlayerNum = 2;
     int32 totalPlayerNum = 3; // null일 수 있음
+    int32 bulletMaxTick = 4;
+    float bulletSpeed = 5;
 }
 
 message NewUser {

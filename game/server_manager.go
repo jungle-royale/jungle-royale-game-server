@@ -110,4 +110,32 @@ func (gm *GameManager) SetServerManager() {
 			fmt.Fprintln(w, res)
 		}
 	})
+
+	// game force start
+	http.HandleFunc("/manage/force-start", func(w http.ResponseWriter, r *http.Request) {
+
+		gameIdxString := r.URL.Query().Get("gameIdx")
+		if gameIdxString == "" {
+			http.Error(w, "Missing gameIdx query parameter", http.StatusBadRequest)
+			return
+		}
+
+		gameIdx, ok := strconv.Atoi(gameIdxString)
+		if ok != nil {
+			http.Error(w, "gameIdx parameter is invalid", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		if r.Method != http.MethodGet {
+			http.Error(w, `{"status":405,"message":"Method Not Allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+
+		game := gm.gameRooms[gameIdx]
+		game.SetGameState(state.Counting)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprintf(w, "Game %d force start\n", gameIdx)
+	})
 }
