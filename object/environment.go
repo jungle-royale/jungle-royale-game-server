@@ -118,6 +118,9 @@ var environment = [][]objectData{
 		objectCircle{4, 16, 1, false},
 		objectRectangle{8.5, 9.25, 3, 1.5, false},
 	},
+
+	// empty tile (type 4)
+	{},
 }
 
 func (tile *Tile) SetTileEnvironment(tileType, objectId int, dx, dy float64) {

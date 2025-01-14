@@ -9,16 +9,17 @@ import (
 )
 
 type gameState struct {
-	GameIdx    int
-	GameName   string
-	GameStatus string
-	PlayerNum  int
-	LastSec    int
+	GameIdx       int
+	GameName      string
+	GameStatus    string
+	PlayerNum     int
+	LastSec       int
+	CalcLoopInSec int
 }
 
 func (gs *gameState) toString() string {
-	return fmt.Sprintf("GameIdx: %d, GameName: %s, GameStatus: %s, PlayerNum: %d, LastSec: %d",
-		gs.GameIdx, gs.GameName, gs.GameStatus, gs.PlayerNum, gs.LastSec)
+	return fmt.Sprintf("GameIdx: %d, GameName: %s, GameStatus: %s, PlayerNum: %d, LastSec: %d, CalcFPS: %d",
+		gs.GameIdx, gs.GameName, gs.GameStatus, gs.PlayerNum, gs.LastSec, gs.CalcLoopInSec)
 }
 
 func (gm *GameManager) SetServerManager() {
@@ -41,18 +42,19 @@ func (gm *GameManager) SetServerManager() {
 			game := gm.gameRooms[gameIdx]
 
 			var gameStatus string
-			if game.playerNum != 0 {
+			if game.state.GameState != state.Empty {
 				if game.state.GameState == state.Waiting || game.state.GameState == state.Counting {
 					gameStatus = "Waiting"
 				} else if game.state.GameState == state.Playing {
 					gameStatus = "Playing"
 				}
 				gameStateList = append(gameStateList, &gameState{
-					GameIdx:    gameIdx,
-					GameName:   game.gameLogger.GetGameName(),
-					GameStatus: gameStatus,
-					PlayerNum:  game.state.Players.Length(),
-					LastSec:    (game.state.LastGameTick*16)/1000 + cons.WAITING_MAP_CHUNK_NUM,
+					GameIdx:       gameIdx,
+					GameName:      game.gameLogger.GetGameName(),
+					GameStatus:    gameStatus,
+					PlayerNum:     game.state.Players.Length(),
+					LastSec:       (game.state.LastGameTick*16)/1000 + cons.WAITING_MAP_CHUNK_NUM,
+					CalcLoopInSec: game.calcLoopInSec,
 				})
 			}
 		}

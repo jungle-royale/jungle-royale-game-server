@@ -71,6 +71,7 @@ type Game struct {
 	ClientIdAllocator *ClientIdAllocator
 	ObjectIdAllocator *object.ObjectIdAllocator
 	broadcastDataSize int
+	calcLoopInSec     int
 }
 
 // playing time - second
@@ -93,6 +94,7 @@ func NewGame(debug bool) *Game {
 		ClientIdAllocator: NewClientIdAllocator(),
 		ObjectIdAllocator: objectIdAllocator,
 		broadcastDataSize: 0,
+		calcLoopInSec:     0,
 	}
 	game.calculator = calculator.NewCalculator(
 		gameState,
@@ -520,13 +522,19 @@ func (game *Game) OnObserver(client *Client) {
 }
 
 func (game *Game) OnClose(client *Client) {
-	game.clients.Delete(ClientId(client.ID))
+
+	if c, ok := game.clients.Get(ClientId(client.ID)); ok {
+		(*c).close()
+	}
+
 	if game.state.GameState == state.Waiting {
+		game.playerNum--
+		game.clients.Delete(ClientId(client.ID))
 		go game.alertPlayerLeavae(client)
 	}
 
 	if game.clients.Length() == 0 {
-		log.Println("clinet's count zero")
+		game.gameLogger.Log("clinet's count zero")
 
 		game.PlusEndCount()
 	}
@@ -718,7 +726,7 @@ func (game *Game) GameStateCheckLoop() {
 		}
 
 		game.loopState.lastCalcLoopCheck = game.loopState.calcLoopCheck
-		// calcLoopInSec := game.loopState.calcLoopCheck - game.loopState.lastCalcLoopCheck
+		game.calcLoopInSec = game.loopState.calcLoopCheck - game.loopState.lastCalcLoopCheck
 		// broadCastLoopInSec := game.loopState.broadcastLoopCheck - game.loopState.lastBroadcastLoopCheck
 		game.loopState.lastBroadcastLoopCheck = game.loopState.broadcastLoopCheck
 		// game.gameLogger.Log("calc, broad, player, last, size: " + fmt.Sprint(calcLoopInSec) + " " + fmt.Sprint(broadCastLoopInSec) + " " + fmt.Sprint(game.state.Players.Length()) + " " + fmt.Sprint(game.state.LastGameTick) + " " + fmt.Sprint(game.broadcastDataSize))

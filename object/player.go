@@ -14,7 +14,6 @@ const DASH_SPEED = 0.2
 const DASH_TICK = 30
 const DASH_COOLTIME = 30
 const PLAYER_RADIOUS = 0.5
-const EPSILON = 1e-9
 const SHOOTING_COOLTIME = 10 // 0.1 sec
 
 // bullet gage
