@@ -53,6 +53,12 @@ func NewState(oia *object.ObjectIdAllocator) *State {
 
 func (state *State) ConfigureState(chunkNum int, playingTime int) {
 
+	isReady := false
+	if playingTime == -1 {
+		isReady = true
+		playingTime = int(math.MaxInt)
+	}
+
 	state.ConfigMu.Lock()
 
 	state.ChunkNum = chunkNum
@@ -66,7 +72,12 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 		state.Tiles[i] = make([]*object.Tile, chunkNum)
 		for j := 0; j < chunkNum; j++ {
 			tildId := state.ObjectIdAllocator.AllocateTileId()
-			tileType := rand.IntN(object.TILE_TYPE_NUM)
+			var tileType int
+			if isReady {
+				tileType = object.TILE_TYPE_NUM
+			} else {
+				tileType = rand.IntN(object.TILE_TYPE_NUM)
+			}
 			newTile := object.NewTile(
 				tildId,
 				float64(i*cons.CHUNK_LENGTH),

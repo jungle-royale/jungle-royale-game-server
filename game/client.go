@@ -11,6 +11,7 @@ type ClientId int
 
 type Client struct {
 	mu             sync.Mutex
+	isClose        bool
 	ID             ClientId
 	GameID         GameId
 	serverClientId string
@@ -29,6 +30,7 @@ func NewClient(
 ) *Client {
 	newClient := &Client{
 		mu:             sync.Mutex{},
+		isClose:        true,
 		GameID:         gameId,
 		serverClientId: serverClientId,
 		userName:       userName,
@@ -41,6 +43,9 @@ func NewClient(
 }
 
 func (client *Client) write(data []byte) {
+	if !client.isClose {
+		return
+	}
 	select {
 	case client.sendChan <- data:
 	default:
@@ -59,6 +64,8 @@ func (client *Client) SendData() {
 }
 
 func (client *Client) close() {
+
+	client.isClose = false
 
 	if client.conn != nil {
 		client.conn.Close()
