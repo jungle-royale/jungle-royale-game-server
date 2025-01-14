@@ -272,6 +272,15 @@ func (game *Game) CalcGameTickLoop() {
 	}
 }
 
+func (game *Game) SetGameState(gameState int) bool {
+	if game.state.GameState == state.Waiting && gameState == state.Counting {
+		game.state.GameState = gameState
+		game.gameLogger.Log("Set Gamestate Waiting -> Counting")
+		return true
+	}
+	return false
+}
+
 func (game *Game) CalcSecLoop() {
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -289,8 +298,10 @@ func (game *Game) CalcSecLoop() {
 				}
 			}()
 			if game.state.GameState == state.Waiting &&
-				game.playerNum >= game.minPlayerNum &&
-				gameStartCount >= 0 {
+				game.playerNum >= game.minPlayerNum {
+				game.state.GameState = state.Counting
+			}
+			if game.state.GameState == state.Counting {
 				Count := &message.GameCount{
 					Count: int32(gameStartCount),
 				}
@@ -448,7 +459,7 @@ func (game *Game) OnClient(client *Client) {
 		// - broad cast 하기 전에, client한테 reconnection 메시지를 보내야 함
 	} else {
 		// 해당 serverClientId가 존재 하지 않는 경우,
-		// wating 상태면 추가, 아니면 에러
+		// waiting 상태면 추가, 아니면 에러
 		if game.state.GameState == state.Waiting {
 			log.Printf("new game client's server client id: %s", client.serverClientId)
 			game.playerNum++
@@ -560,8 +571,10 @@ func (game *Game) SetPlayer(client *Client) {
 
 	// send GameInit message
 	gameInit := &message.GameInit{
-		Id:           int32(clientId),
-		MinPlayerNum: int32(game.minPlayerNum),
+		Id:            int32(clientId),
+		MinPlayerNum:  int32(game.minPlayerNum),
+		BulletMaxTick: object.BULLET_MAX_TICK,
+		BulletSpeed:   object.BULLET_SPEED,
 	}
 	data, err := proto.Marshal(&message.Wrapper{
 		MessageType: &message.Wrapper_GameInit{
@@ -581,6 +594,8 @@ func (game *Game) SetReconnectionPlayer(client *Client, lastClientId ClientId) {
 		Id:             int32(client.ID),
 		MinPlayerNum:   int32(game.minPlayerNum),
 		TotalPlayerNum: int32(game.state.Players.Length()),
+		BulletMaxTick:  object.BULLET_MAX_TICK,
+		BulletSpeed:    object.BULLET_SPEED,
 	}
 	data, err := proto.Marshal(&message.Wrapper{
 		MessageType: &message.Wrapper_GameReconnect{
