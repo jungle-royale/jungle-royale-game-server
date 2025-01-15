@@ -63,9 +63,10 @@ func (client *Client) SendData() {
 		}
 		err := client.conn.WriteMessage(websocket.BinaryMessage, data)
 		if err != nil {
-			log.Printf("err while sending data to client %s", client.serverClientId)
+			log.Printf("err while sending data to client %s: %v", client.serverClientId, err)
 		}
 	}
+
 }
 
 func (client *Client) close() {
