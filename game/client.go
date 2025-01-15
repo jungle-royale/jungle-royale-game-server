@@ -58,7 +58,7 @@ func (client *Client) write(data []byte) {
 func (client *Client) SendData() {
 	for data := range client.sendChan {
 		// log.Println(len(data))
-		if client.conn != nil {
+		if client.conn == nil {
 			continue
 		}
 		err := client.conn.WriteMessage(websocket.BinaryMessage, data)
