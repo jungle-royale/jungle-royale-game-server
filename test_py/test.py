@@ -12,7 +12,7 @@ http_url = "http://game-api.eternalsnowman.com:8080"
 # ws_url = "ws://localhost:8000"
 ws_url = "ws://game-api.eternalsnowman.com:8080"
 min_player = 100
-room_num = 1
+room_num = 30
 
 async def create_room(room_num):
     create_room_url = http_url + "/api/create-game"
