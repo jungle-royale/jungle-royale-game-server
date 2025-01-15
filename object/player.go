@@ -206,6 +206,7 @@ func (player *Player) MakeSendingData() *message.PlayerState {
 		Dx:           float32(player.physicalObject.GetDx()),
 		Dy:           float32(player.physicalObject.GetDy()),
 		BulletGage:   int32(player.BulletGauge),
+		KillNum:      int32(player.DyingStatus.KillNum),
 	}
 }
 

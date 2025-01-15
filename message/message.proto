@@ -81,6 +81,7 @@ message PlayerState {
     float dx = 12;
     float dy = 13;
     int32 bulletGage = 14;  // max 1000
+    int32 killNum = 15;
 }
 
 message ChangeBulletState {
