@@ -28,10 +28,12 @@ func NewClient(
 	userName string,
 	conn *websocket.Conn,
 	isObserver bool,
+	clientId int,
 ) *Client {
 	newClient := &Client{
 		mu:             sync.Mutex{},
 		isClose:        false,
+		ID:             ClientId(clientId),
 		GameID:         gameId,
 		serverClientId: serverClientId,
 		userName:       userName,

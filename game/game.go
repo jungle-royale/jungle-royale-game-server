@@ -68,7 +68,6 @@ type Game struct {
 	gameLogger        *serverlog.GameLogger
 	loopState         LoopState
 	loopWaitGroup     sync.WaitGroup
-	ClientIdAllocator *ClientIdAllocator
 	ObjectIdAllocator *object.ObjectIdAllocator
 	broadcastDataSize int
 	calcLoopInSec     int
@@ -91,7 +90,6 @@ func NewGame(debug bool) *Game {
 		endTickCount:      0,
 		loopState:         LoopState{0, 0, 0, 0},
 		loopWaitGroup:     sync.WaitGroup{},
-		ClientIdAllocator: NewClientIdAllocator(),
 		ObjectIdAllocator: objectIdAllocator,
 		broadcastDataSize: 0,
 		calcLoopInSec:     0,
@@ -456,17 +454,15 @@ func (game *Game) OnClient(client *Client) {
 	if exists {
 		log.Printf("reconnection: %s", client.serverClientId)
 		game.SetReconnectionPlayer(client, *lastClientId)
-		client.ID = ClientId(game.ClientIdAllocator.AllocateClientId())
 		game.clients.Store(client.ID, client)
 		// MARK: reconnection 처리 후에 store 해야 함!
 		// - broad cast 하기 전에, client한테 reconnection 메시지를 보내야 함
 	} else {
 		// 해당 serverClientId가 존재 하지 않는 경우,
 		// waiting 상태면 추가, 아니면 에러
-		if game.state.GameState == state.Waiting {
+		if game.state.GameState == state.Waiting || game.state.GameState == state.Counting {
 			log.Printf("new game client's server client id: %s", client.serverClientId)
 			game.playerNum++
-			client.ID = ClientId(game.ClientIdAllocator.AllocateClientId())
 			game.SetPlayer(client)
 			game.clients.Store(client.ID, client)
 			game.serverClientTable.Store(client.serverClientId, ClientId(client.ID))
@@ -516,7 +512,6 @@ func (game *Game) OnObserver(client *Client) {
 	}
 
 	log.Printf("new game client's server client id: %s", client.serverClientId)
-	client.ID = ClientId(game.ClientIdAllocator.AllocateClientId())
 	game.clients.Store(client.ID, client)
 
 	game.gameLogger.Log("On Observer")

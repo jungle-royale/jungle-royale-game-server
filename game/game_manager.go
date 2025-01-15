@@ -34,6 +34,7 @@ type GameManager struct {
 	debug                bool // production, development 환경 체크
 	debugClientCount     int  // debug 전용
 	gameManagerLogger    *serverlog.GameManagerLogger
+	ClientIdAllocator    *ClientIdAllocator
 }
 
 func NewGameManager(
@@ -50,6 +51,7 @@ func NewGameManager(
 		debug,
 		0,
 		serverlog.NewGameManagerLogger(),
+		NewClientIdAllocator(),
 	}
 	for i := 0; i < cons.MaxGameNum; i++ {
 		socket.gameRooms[i] = NewGame(debug)
@@ -176,7 +178,7 @@ func (gameManager *GameManager) Listen() {
 		// log.Println("new client", gameId, serverClientId)
 		gameManager.gameManagerLogger.Log("new observer")
 
-		newClient := NewClient(GameId(gameId), "", "", conn, true)
+		newClient := NewClient(GameId(gameId), "", "", conn, true, gameManager.ClientIdAllocator.AllocateClientId())
 		gameManager.clientChannel <- newClient
 
 		log.Printf("Client %d connected", newClient.ID)
@@ -258,7 +260,7 @@ func (gameManager *GameManager) Listen() {
 		// log.Println("new client", gameId, serverClientId)
 		gameManager.gameManagerLogger.Log("new client " + serverClientId)
 
-		newClient := NewClient(GameId(gameId), serverClientId, userName, conn, false)
+		newClient := NewClient(GameId(gameId), serverClientId, userName, conn, false, gameManager.ClientIdAllocator.AllocateClientId())
 		gameManager.clientChannel <- newClient
 
 		log.Printf("Client %d connected", newClient.ID)
