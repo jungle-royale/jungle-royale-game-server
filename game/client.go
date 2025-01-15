@@ -19,6 +19,7 @@ type Client struct {
 	conn           *websocket.Conn
 	sendChan       chan []byte
 	isObserver     bool
+	closeOnce      *sync.Once
 }
 
 func NewClient(
@@ -30,20 +31,21 @@ func NewClient(
 ) *Client {
 	newClient := &Client{
 		mu:             sync.Mutex{},
-		isClose:        true,
+		isClose:        false,
 		GameID:         gameId,
 		serverClientId: serverClientId,
 		userName:       userName,
 		conn:           conn,
 		sendChan:       make(chan []byte, 200),
 		isObserver:     isObserver,
+		closeOnce:      new(sync.Once),
 	}
 	go newClient.SendData()
 	return newClient
 }
 
 func (client *Client) write(data []byte) {
-	if !client.isClose {
+	if client.isClose {
 		return
 	}
 	select {
@@ -68,17 +70,17 @@ func (client *Client) SendData() {
 
 func (client *Client) close() {
 
-	client.isClose = false
+	client.closeOnce.Do(func() {
+		client.isClose = true
 
-	if client.conn != nil {
-		client.conn.Close()
-	}
+		if client.conn != nil {
+			client.conn.Close()
+		}
 
-	select {
-	case <-client.sendChan:
-	default:
-		close(client.sendChan)
-	}
+		if client.sendChan != nil {
+			close(client.sendChan)
+		}
 
-	client.conn = nil
+		client.conn = nil
+	})
 }
