@@ -12,14 +12,14 @@ http_url = "http://game-api.eternalsnowman.com:8080"
 # ws_url = "ws://localhost:8000"
 ws_url = "ws://game-api.eternalsnowman.com:8080"
 min_player = 100
-room_num = 30
+room_num = 1
 
 async def create_room(room_num):
     create_room_url = http_url + "/api/create-game"
     data = {
         "roomId": "room" + str(room_num),
         "MinPlayers": min_player,
-	    "MaxPlayTime": 60
+	    "MaxPlayTime": 30
     }
     async with httpx.AsyncClient() as client:
         response = await client.post(create_room_url, json=data)
