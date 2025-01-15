@@ -56,14 +56,16 @@ message CurrentPlayers {
 
 // server → client
 message GameState {
+    repeated ChunkState chunkState = 1;
+    repeated TileState tileState = 2;
+    int32 lastSec = 3;
+    ChangingState changingState = 4;
+    int64 sendingTime = 5;
+}
+
+message ChunkState {
     repeated PlayerState playerState = 1;
     repeated BulletState bulletState = 2;
-    repeated HealPackState healPackState = 3;
-    repeated MagicItemState magicItemState = 4;
-    repeated TileState tileState = 5;
-    int32 lastSec = 6;
-    ChangingState changingState = 7;
-    int64 sendingTime = 8;
 }
 
 message PlayerState {
@@ -97,6 +99,8 @@ message BulletState {
 
     float x = 3;
     float y = 4;
+    float dx = 5;
+    float dy = 6;
 }
 
 message GameCount {
@@ -110,6 +114,8 @@ message DoDash {
 message GameStart {
     int32 mapLength = 1;
     int32 totalPlayerNum = 2;
+    repeated HealPackState healPackState = 3;
+    repeated MagicItemState magicItemState = 4;
 }
 
 message HealPackState {

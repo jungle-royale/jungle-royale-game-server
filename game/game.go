@@ -322,10 +322,13 @@ func (game *Game) CalcSecLoop() {
 
 				gameStartCount--
 				if gameStartCount == 0 {
+
 					mapLength := int(math.Sqrt(float64(game.playerNum)))
 					if mapLength < 2 {
 						mapLength = 2
 					}
+					game.SetPlayingStatus(mapLength)
+
 					start := &message.GameStart{
 						MapLength:      int32(mapLength * cons.CHUNK_LENGTH),
 						TotalPlayerNum: int32(game.state.Players.Length()),
@@ -341,7 +344,7 @@ func (game *Game) CalcSecLoop() {
 					}
 					go game.alertGameStart()
 					game.broadcast(gameStart)
-					game.SetPlayingStatus(mapLength)
+
 					game.gameLogger.Log("game start")
 				}
 			}
@@ -371,17 +374,36 @@ func (game *Game) BroadcastLoop() {
 
 			game.state.ConfigMu.Lock()
 
-			playerList := make([]*message.PlayerState, 0)
-			game.state.Players.Range(func(key int, player *object.Player) bool {
-				playerList = append(playerList, player.MakeSendingData())
-				return true
-			})
+			chunkStateTable := make([][]*message.ChunkState, game.state.ChunkNum)
+			for ci := 0; ci < game.state.ChunkNum; ci++ {
+				chunkStateTable[ci] = make([]*message.ChunkState, game.state.ChunkNum)
+				for cj := 0; cj < game.state.ChunkNum; cj++ {
+					playerSet := game.calculator.GetChunk().GetObjectKeySet(ci, cj, object.OBJECT_PLAYER)
+					bulletSet := game.calculator.GetChunk().GetObjectKeySet(ci, cj, object.OBJECT_BULLET)
 
-			bulletList := make([]*message.BulletState, 0)
-			game.state.Bullets.Range(func(key int, bullet *object.Bullet) bool {
-				bulletList = append(bulletList, bullet.MakeSendingData())
-				return true
-			})
+					playerList := make([]*message.PlayerState, 0)
+					bulletList := make([]*message.BulletState, 0)
+
+					playerSet.Range(func(i int) bool {
+						if player, ok := game.state.Players.Get(i); ok {
+							playerList = append(playerList, (*player).MakeSendingData())
+						}
+						return true
+					})
+
+					bulletSet.Range(func(i int) bool {
+						if bullet, ok := game.state.Bullets.Get(i); ok {
+							bulletList = append(bulletList, (*bullet).MakeSendingData())
+						}
+						return true
+					})
+
+					chunkStateTable[ci][cj] = &message.ChunkState{
+						PlayerState: playerList,
+						BulletState: bulletList,
+					}
+				}
+			}
 
 			healPackList := make([]*message.HealPackState, 0)
 			game.state.HealPacks.Range(func(key int, healPack *object.HealPack) bool {
@@ -395,6 +417,8 @@ func (game *Game) BroadcastLoop() {
 				return true
 			})
 
+			changingStateList := game.state.ChangingState.MakeSendingData()
+
 			tileStateList := make([]*message.TileState, 0)
 			for i := 0; i < game.state.ChunkNum; i++ {
 				for j := 0; j < game.state.ChunkNum; j++ {
@@ -404,34 +428,49 @@ func (game *Game) BroadcastLoop() {
 				}
 			}
 
-			gameState := &message.GameState{
-				LastSec:        int32((game.state.LastGameTick*16)/1000 + cons.WAITING_MAP_CHUNK_NUM),
-				PlayerState:    playerList,
-				BulletState:    bulletList,
-				HealPackState:  healPackList,
-				MagicItemState: magicItemList,
-				TileState:      tileStateList,
-				ChangingState:  game.state.ChangingState.MakeSendingData(),
-				SendingTime:    int64(time.Now().UnixMilli()),
-			}
+			for ci := 0; ci < game.state.ChunkNum; ci++ {
+				for cj := 0; cj < game.state.ChunkNum; cj++ {
 
-			// log.Println(gameState)
-			// log.Printf("\n\n")
+					chunkStateList := make([]*message.ChunkState, 0)
+					for ti := ci - 1; ti <= ci+1; ti++ {
+						for tj := cj - 1; tj <= cj+1; tj++ {
+							if ti < 0 || game.state.ChunkNum <= ti || tj < 0 || game.state.ChunkNum <= tj {
+								continue
+							}
+							chunkStateList = append(chunkStateList, chunkStateTable[ti][tj])
+						}
+					}
 
-			data, err := proto.Marshal(&message.Wrapper{
-				MessageType: &message.Wrapper_GameState{
-					GameState: gameState,
-				},
-			})
+					gameState := &message.GameState{
+						ChunkState:    chunkStateList,
+						TileState:     tileStateList,
+						LastSec:       int32((game.state.LastGameTick*16)/1000 + cons.WAITING_MAP_CHUNK_NUM),
+						ChangingState: changingStateList,
+						SendingTime:   int64(time.Now().UnixMilli()),
+					}
+					playerSet := game.calculator.GetChunk().GetObjectKeySet(ci, cj, object.OBJECT_PLAYER)
+					playerSet.Range(func(i int) bool {
+						if client, ok := game.clients.Get(ClientId(i)); ok {
 
-			if err != nil {
-				log.Printf("Failed to marshal GameState: %v", err)
-				return
+							data, err := proto.Marshal(&message.Wrapper{
+								MessageType: &message.Wrapper_GameState{
+									GameState: gameState,
+								},
+							})
+
+							if err != nil {
+								log.Printf("Failed to marshal GameState: %v", err)
+								return true
+							}
+
+							(*client).write(data)
+						}
+						return true
+					})
+				}
 			}
 
 			game.state.ConfigMu.Unlock()
-
-			game.broadcast(data)
 
 		}()
 		game.loopState.broadcastLoopCheck++
