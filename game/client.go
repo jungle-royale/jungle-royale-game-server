@@ -57,8 +57,7 @@ func (client *Client) SendData() {
 	for data := range client.sendChan {
 		// log.Println(len(data))
 		if client.conn != nil {
-			client.conn.Close()
-			return
+			continue
 		}
 		err := client.conn.WriteMessage(websocket.BinaryMessage, data)
 		if err != nil {
