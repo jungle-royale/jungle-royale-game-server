@@ -56,6 +56,10 @@ func (client *Client) write(data []byte) {
 func (client *Client) SendData() {
 	for data := range client.sendChan {
 		// log.Println(len(data))
+		if client.conn != nil {
+			client.conn.Close()
+			return
+		}
 		err := client.conn.WriteMessage(websocket.BinaryMessage, data)
 		if err != nil {
 			log.Printf("err while sending data to client %s", client.serverClientId)
