@@ -11,8 +11,8 @@ const PLAYER_SPEED = 0.06
 
 // const PLAYER_SPEED = 1
 const DASH_SPEED = 0.2
-const DASH_TICK = 30
-const DASH_COOLTIME = 30
+const DASH_TICK = 20
+const DASH_COOLTIME = 15
 const PLAYER_RADIOUS = 0.5
 const SHOOTING_COOLTIME = 10 // 0.1 sec
 
