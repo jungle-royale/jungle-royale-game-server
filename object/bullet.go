@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-const BULLET_SPEED = 0.25
+const BULLET_SPEED = 0.3
 const BULLET_DAMAGE = 5
 const BULLET_RADIOUS = 0.2
 const BULLET_MAX_TICK = 60
