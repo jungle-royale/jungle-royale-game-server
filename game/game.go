@@ -150,7 +150,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	})
 
 	// healpack setting
-	for i := 0; i < length*length*3; i++ {
+	for i := 0; i < length*length*2; i++ {
 		x := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		newHealPack := object.NewHealPack(x, y, game.ObjectIdAllocator.AllocateHealPackId())
@@ -159,7 +159,7 @@ func (game *Game) SetPlayingStatus(length int) *Game {
 	}
 
 	// magic item setting
-	for i := 0; i < length*length*3; i++ {
+	for i := 0; i < length*length*2; i++ {
 		x := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		y := float64(rand.Intn(int(game.state.MaxCoord-1))) + 0.5
 		newStoneItem := object.NewMagicItem(object.STONE_MAGIC, x, y, game.ObjectIdAllocator.AllocateMagicId())

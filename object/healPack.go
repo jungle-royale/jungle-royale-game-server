@@ -7,8 +7,7 @@ import (
 )
 
 const HEAL_AMOUNT = 30
-const HEALPACK_WIDTH = 0.5
-const HEALPACK_LENGTH = 0.3
+const HEALPACK_RADIOUS = 0.5
 
 type HealPack struct {
 	mu             sync.Mutex
@@ -20,7 +19,7 @@ func NewHealPack(x, y float64, id int) *HealPack {
 	return &HealPack{
 		sync.Mutex{},
 		id,
-		physical.NewRectangle(x, y, HEALPACK_WIDTH, HEALPACK_LENGTH),
+		physical.NewCircle(x, y, HEALPACK_RADIOUS),
 	}
 }
 
