@@ -128,7 +128,7 @@ func (game *Game) MakeLog(clientId ClientId, rank, kill int) {
 }
 
 func (game *Game) SetReadyStatus() *Game {
-	game.state.ConfigureState(cons.WAITING_MAP_CHUNK_NUM, int(math.MaxInt))
+	game.state.ConfigureState(cons.WAITING_MAP_CHUNK_NUM, game.playingTime)
 	game.state.GameState = state.Waiting
 	game.calculator.ConfigureCalculator(cons.WAITING_MAP_CHUNK_NUM)
 	game.gameLogger.Log("Set Ready Status")
