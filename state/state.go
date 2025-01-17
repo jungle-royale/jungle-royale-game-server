@@ -82,7 +82,7 @@ func (state *State) ConfigureState(chunkNum int, playingTime int) {
 	}
 
 	// nonfallen tile setting
-	state.FallenTime = (state.LastGameTick - (cons.TILE_FALL_ALERT_TIME)) / (chunkNum * chunkNum)
+	state.FallenTime = (state.LastGameTick - (cons.TILE_FALL_ALERT_TIME)) / (chunkNum*chunkNum - 1)
 
 	state.ConfigMu.Unlock()
 }
